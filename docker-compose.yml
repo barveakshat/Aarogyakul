@@ -1,0 +1,23 @@
+version: "3.8"
+services:
+  postgres:
+    image: postgres:17
+    container_name: aarogyakul-db
+    environment:
+      POSTGRES_DB: aarogyakul
+      POSTGRES_USER: aarogyakul
+      POSTGRES_PASSWORD: aarogyakul
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aarogyakul -d aarogyakul"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata:
+    driver: local
