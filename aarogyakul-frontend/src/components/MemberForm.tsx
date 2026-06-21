@@ -1,6 +1,7 @@
 import { FormEvent, useState } from 'react'
 import type { MemberRequest, MemberResponse } from '../types/api'
 import { Button, SelectField, TextField } from './ui'
+import { PhotoUpload } from './PhotoUpload'
 
 const bloodGroups = ['', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']
 const genders = ['', 'Female', 'Male', 'Non-binary', 'Prefer not to say']
@@ -58,7 +59,7 @@ export function MemberForm({
       </SelectField>
       <TextField label="Relationship" value={form.relationshipToOwner || ''} placeholder="Self, mother, child" onChange={(event) => setForm({ ...form, relationshipToOwner: event.target.value })} />
       <div className="sm:col-span-2">
-        <TextField label="Profile photo URL" value={form.profilePhotoUrl || ''} onChange={(event) => setForm({ ...form, profilePhotoUrl: event.target.value })} />
+        <PhotoUpload name={form.fullName} value={form.profilePhotoUrl || ''} onChange={(profilePhotoUrl) => setForm({ ...form, profilePhotoUrl })} />
       </div>
       <div className="sm:col-span-2">
         <Button type="submit" disabled={submitting}>{submitting ? 'Saving...' : submitLabel}</Button>

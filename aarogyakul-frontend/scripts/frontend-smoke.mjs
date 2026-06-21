@@ -40,9 +40,9 @@ try {
   )
 
   const landing = renderPage(LandingPage, '/')
-  assert.match(landing, /Turn scattered medical PDFs into a clear family health timeline/)
+  assert.match(landing, /A calmer way to understand every family health report/)
   assert.match(landing, /AI Report Reader/)
-  assert.match(landing, /Create free workspace/)
+  assert.match(landing, /Create health workspace/)
 
   const login = renderPage(LoginPage, '/login')
   assert.match(login, /Welcome back/)
@@ -50,8 +50,10 @@ try {
   assert.match(login, /type="password"/)
 
   const register = renderPage(RegisterPage, '/register')
-  assert.match(register, /Create your account/)
+  assert.match(register, /Create your profile/)
   assert.match(register, /Phone number/)
+  assert.match(register, /Family name/)
+  assert.match(register, /Profile photo/)
   assert.match(register, /minLength="8"/)
 
   assert.equal(format.documentTypeLabel('BLOOD_REPORT'), 'Blood report')

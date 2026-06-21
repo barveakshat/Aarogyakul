@@ -2,6 +2,7 @@ import { FormEvent, useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router'
 import { useAuth } from '../hooks/useAuth'
 import { Alert, Button, Card, TextField } from '../components/ui'
+import { BrandMark } from '../components/BrandMark'
 
 export default function LoginPage() {
   const { login, user } = useAuth()
@@ -48,11 +49,9 @@ function AuthFrame({ title, subtitle, children }: { title: string; subtitle: str
   return (
     <div className="flex min-h-screen items-center justify-center bg-bg px-4 py-10">
       <div className="w-full max-w-md">
-        <div className="mb-6 text-center">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-crd border border-brd bg-white text-sm font-semibold text-pri shadow-crd">
-            AK
-          </div>
-          <h1 className="text-2xl font-semibold text-txtP">{title}</h1>
+        <div className="mb-6">
+          <div className="mb-6 flex justify-center"><BrandMark /></div>
+          <h1 className="text-center text-3xl font-black tracking-tight text-txtP">{title}</h1>
           <p className="mt-2 text-sm leading-6 text-txtS">{subtitle}</p>
         </div>
         <Card className="p-6">{children}</Card>

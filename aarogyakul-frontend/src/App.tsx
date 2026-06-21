@@ -9,6 +9,7 @@ import DashboardPage from './pages/DashboardPage'
 import MemberProfilePage from './pages/MemberProfilePage'
 import TimelinePage from './pages/TimelinePage'
 import UploadPage from './pages/UploadPage'
+import { ClinicalPage, InsightsPage, ReportsPage, TimelinesPage } from './pages/FeatureOverviewPages'
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
@@ -42,6 +43,10 @@ function App() {
             path="/app"
             element={<DashboardPage />}
           />
+          <Route path="/app/reports" element={<ReportsPage />} />
+          <Route path="/app/insights" element={<InsightsPage />} />
+          <Route path="/app/timelines" element={<TimelinesPage />} />
+          <Route path="/app/clinical" element={<ClinicalPage />} />
           <Route
             path="/member/:memberId"
             element={<MemberProfilePage />}
