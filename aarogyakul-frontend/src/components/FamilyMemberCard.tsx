@@ -5,13 +5,14 @@ import { Card } from './ui'
 
 export function FamilyMemberCard({ member }: { member: MemberResponse }) {
   return (
-    <Link to={`/member/${member.memberId}`} className="block rounded-crd outline-none transition-colors duration-200 focus:ring-4 focus:ring-pri/10">
-      <Card className="h-full p-5 transition-colors duration-200 hover:border-pri">
+    <Link to={`/member/${member.memberId}`} className="block rounded-crd outline-none transition duration-200 focus:ring-4 focus:ring-pri/10">
+      <Card className="h-full overflow-hidden p-5 transition duration-200 hover:-translate-y-1 hover:border-pri hover:shadow-glow">
+        <div className="mb-5 h-2 rounded-full bg-gradient-to-r from-pri via-aqua to-pri2" />
         <div className="flex items-start gap-4">
           {member.profilePhotoUrl ? (
-            <img className="h-12 w-12 rounded-full object-cover" src={member.profilePhotoUrl} alt={`${member.fullName} profile`} />
+            <img className="h-14 w-14 rounded-2xl object-cover shadow-crd" src={member.profilePhotoUrl} alt={`${member.fullName} profile`} />
           ) : (
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-blue-50 text-sm font-semibold text-pri">
+            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-mint to-emerald-100 text-sm font-black text-pri">
               {initials(member.fullName)}
             </div>
           )}

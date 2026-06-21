@@ -56,7 +56,7 @@ export default function MemberProfilePage() {
       <PageHeader
         title={member.fullName}
         description="Profile, clinical notes, reports, and AI-generated results for this family member."
-        action={<Link className="inline-flex rounded-btn bg-pri px-4 py-2 text-sm font-medium text-white hover:bg-blue-700" to={`/member/${memberId}/upload`}>Upload PDF</Link>}
+        action={<Link className="inline-flex rounded-btn bg-gradient-to-r from-pri to-pri2 px-4 py-2 text-sm font-bold text-white shadow-glow" to={`/member/${memberId}/upload`}>Upload PDF</Link>}
       />
       {error ? <div className="mb-4"><Alert message={error} /></div> : null}
 
@@ -65,12 +65,12 @@ export default function MemberProfilePage() {
           <Card className="p-5">
             <div className="flex items-start gap-4">
               {member.profilePhotoUrl ? (
-                <img className="h-16 w-16 rounded-full object-cover" src={member.profilePhotoUrl} alt={`${member.fullName} profile`} />
+                <img className="h-20 w-20 rounded-3xl object-cover shadow-crd" src={member.profilePhotoUrl} alt={`${member.fullName} profile`} />
               ) : (
-                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-blue-50 text-lg font-semibold text-pri">{initials(member.fullName)}</div>
+                <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-br from-mint to-emerald-100 text-lg font-black text-pri">{initials(member.fullName)}</div>
               )}
               <div className="min-w-0">
-                <h2 className="text-lg font-semibold text-txtP">{member.fullName}</h2>
+                <h2 className="text-xl font-black text-txtP">{member.fullName}</h2>
                 <p className="text-sm text-txtS">{member.relationshipToOwner || 'Family member'}</p>
               </div>
             </div>
@@ -83,7 +83,7 @@ export default function MemberProfilePage() {
           </Card>
 
           <Card className="p-5">
-            <h2 className="text-base font-semibold text-txtP">Edit profile</h2>
+            <h2 className="text-base font-black text-txtP">Edit profile</h2>
             <div className="mt-5">
               <MemberForm
                 initial={member}
@@ -127,7 +127,7 @@ export default function MemberProfilePage() {
                 <h2 className="text-base font-semibold text-txtP">Timeline</h2>
                 <p className="mt-1 text-sm text-txtS">Review document events and extracted report summaries chronologically.</p>
               </div>
-              <Link className="inline-flex rounded-btn border border-brd px-4 py-2 text-sm font-medium text-txtP hover:border-pri hover:text-pri" to={`/member/${memberId}/timeline`}>Open timeline</Link>
+              <Link className="inline-flex rounded-btn border border-brd bg-white px-4 py-2 text-sm font-bold text-pri hover:border-pri" to={`/member/${memberId}/timeline`}>Open timeline</Link>
             </div>
           </Card>
         </div>
@@ -160,11 +160,11 @@ function ClinicalList({
 }) {
   return (
     <Card className="p-5">
-      <h2 className="text-base font-semibold text-txtP">{title}</h2>
+      <h2 className="text-base font-black text-txtP">{title}</h2>
       <div className="mt-4 space-y-3">
-        {items.length === 0 ? <p className="rounded-btn bg-slate-50 px-3 py-2 text-sm text-txtS">{empty}</p> : null}
+        {items.length === 0 ? <p className="rounded-2xl bg-mint/40 px-3 py-2 text-sm text-txtS">{empty}</p> : null}
         {items.map((item) => (
-          <div key={item.id} className="flex items-start justify-between gap-3 rounded-btn border border-brd px-3 py-2">
+          <div key={item.id} className="flex items-start justify-between gap-3 rounded-2xl border border-brd bg-white/70 px-3 py-2">
             <div>
               <div className="text-sm font-medium text-txtP">{item.title}</div>
               {item.meta ? <div className="mt-0.5 text-xs text-txtS">{item.meta}</div> : null}

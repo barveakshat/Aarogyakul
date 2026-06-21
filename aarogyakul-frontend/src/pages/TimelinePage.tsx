@@ -36,20 +36,20 @@ export default function TimelinePage() {
       <PageHeader
         title={`${member?.fullName || 'Member'} timeline`}
         description="A chronological view of report uploads and medical events created by the AI processing pipeline."
-        action={<Link className="inline-flex rounded-btn border border-brd px-4 py-2 text-sm font-medium text-txtP hover:border-pri hover:text-pri" to={`/member/${memberId}`}>Back to profile</Link>}
+        action={<Link className="inline-flex rounded-btn border border-brd bg-white px-4 py-2 text-sm font-bold text-pri hover:border-pri" to={`/member/${memberId}`}>Back to profile</Link>}
       />
       {error ? <div className="mb-4"><Alert message={error} /></div> : null}
       {events.length === 0 ? (
         <EmptyState title="Timeline is empty" description="Upload a report to create the first timeline event for this member." />
       ) : (
         <Card className="p-5">
-          <div className="relative space-y-6 before:absolute before:bottom-2 before:left-4 before:top-2 before:w-px before:bg-brd">
+          <div className="relative space-y-6 before:absolute before:bottom-2 before:left-4 before:top-2 before:w-px before:bg-gradient-to-b before:from-pri before:to-pri2">
             {events.map((event) => (
               <div key={event.id} className="relative flex gap-4">
-                <div className="z-10 mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-brd bg-white text-xs font-semibold text-pri">
+                <div className="z-10 mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-pri to-pri2 text-xs font-black text-white shadow-glow">
                   {timelineEventLabel(event.eventType).slice(0, 1)}
                 </div>
-                <div className="min-w-0 flex-1 rounded-crd border border-brd bg-white p-4">
+                <div className="min-w-0 flex-1 rounded-crd border border-brd bg-white/80 p-4 shadow-crd">
                   <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
                     <div>
                       <div className="text-xs font-medium uppercase tracking-wide text-txtS">{timelineEventLabel(event.eventType)}</div>

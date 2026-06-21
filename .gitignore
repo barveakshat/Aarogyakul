@@ -14,4 +14,7 @@ aarogyakul-frontend/.vite/
 .DS_Store
 Thumbs.db
 
-.env
+# Environment files may contain secrets. Keep only sanitized examples.
+**/.env
+**/.env.*
+!**/.env.example

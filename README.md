@@ -190,6 +190,8 @@ pnpm dev
 
 Open `http://localhost:5173`. Vite proxies `/api` to the backend during development. For a separately hosted API, set `VITE_API_BASE_URL` before building the frontend.
 
+No frontend `.env` file is required for local development. Never copy backend variables such as database credentials, AWS keys, Hugging Face tokens, or `JWT_SECRET` into the frontend: Vite variables are part of the browser build and must be treated as public. The frontend `.env.example` contains only the optional public API base URL.
+
 ## Configuration Reference
 
 | Variable | Required | Default | Purpose |
@@ -210,7 +212,7 @@ Open `http://localhost:5173`. Vite proxies `/api` to the backend during developm
 | `AWS_REGION` | S3 only | `ap-south-1` | Bucket region |
 | `TESSDATA_PREFIX` | OCR only | Empty | Tesseract language-data path |
 | `SERVER_CORS_ORIGIN` | No | `http://localhost:5173` | Allowed frontend origin |
-| `VITE_API_BASE_URL` | Hosted frontend | Same origin | Frontend API base URL |
+| `VITE_API_BASE_URL` | Hosted frontend only | Same origin | Public frontend API base URL; never place secrets in a `VITE_*` variable |
 
 ### Enable AWS S3
 
