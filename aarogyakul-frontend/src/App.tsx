@@ -1,5 +1,8 @@
 import { Routes, Route, Navigate } from 'react-router'
 import { useAuth } from './hooks/useAuth'
+import { AppLayout } from './components/AppLayout'
+import { LoadingState } from './components/ui'
+import LandingPage from './pages/LandingPage'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import DashboardPage from './pages/DashboardPage'
@@ -11,11 +14,7 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
   
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    )
+    return <LoadingState label="Preparing AarogyaKul" />
   }
   
   if (!user) {
@@ -27,43 +26,41 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
 
 function App() {
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-bg">
       <Routes>
+        <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route
-          path="/"
           element={
             <PrivateRoute>
-              <DashboardPage />
+              <AppLayout />
             </PrivateRoute>
           }
-        />
+        >
+          <Route
+            path="/app"
+            element={<DashboardPage />}
+          />
+          <Route
+            path="/member/:memberId"
+            element={<MemberProfilePage />}
+          />
+          <Route
+            path="/member/:memberId/timeline"
+            element={<TimelinePage />}
+          />
+          <Route
+            path="/member/:memberId/upload"
+            element={<UploadPage />}
+          />
+        </Route>
         <Route
-          path="/member/:memberId"
+          path="*"
           element={
-            <PrivateRoute>
-              <MemberProfilePage />
-            </PrivateRoute>
+            <Navigate to="/" replace />
           }
         />
-        <Route
-          path="/member/:memberId/timeline"
-          element={
-            <PrivateRoute>
-              <TimelinePage />
-            </PrivateRoute>
-          }
-        />
-        <Route
-          path="/member/:memberId/upload"
-          element={
-            <PrivateRoute>
-              <UploadPage />
-            </PrivateRoute>
-          }
-        />
-        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </div>
   )
