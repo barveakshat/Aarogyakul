@@ -1,20 +1,77 @@
-
-
-# Frontend
+# =========================
+# Frontend (Vite/React)
+# =========================
 aarogyakul-frontend/node_modules/
 aarogyakul-frontend/dist/
 aarogyakul-frontend/.vite/
 
-# IDE
-.idea/
-*.iml
-*.log
+# =========================
+# Backend (Spring Boot)
+# =========================
+aarogyakul-backend/target/
+aarogyakul-backend/.mvn/wrapper/maven-wrapper.jar
 
-# OS
-.DS_Store
-Thumbs.db
-
-# Environment files may contain secrets. Keep only sanitized examples.
+# =========================
+# Environment & Secrets
+# =========================
 **/.env
 **/.env.*
 !**/.env.example
+
+# =========================
+# IDE
+# =========================
+.vscode/
+.idea/
+*.iml
+
+# =========================
+# Logs
+# =========================
+*.log
+logs/
+*.out
+
+# =========================
+# OS Files
+# =========================
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# =========================
+# Build Artifacts
+# =========================
+build/
+dist/
+out/
+
+# =========================
+# Java
+# =========================
+*.class
+*.jar
+*.war
+*.ear
+
+# =========================
+# Temporary Files
+# =========================
+*.tmp
+*.temp
+*.swp
+*.swo
+
+# =========================
+# Archives
+# =========================
+*.zip
+*.tar
+*.tar.gz
+
+# =========================
+# Database Files (local)
+# =========================
+*.db
+*.sqlite
+*.sqlite3
