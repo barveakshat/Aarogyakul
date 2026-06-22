@@ -75,3 +75,10 @@ out/
 *.db
 *.sqlite
 *.sqlite3
+
+# Documentation not required in repo
+plans/
+AGENTS.md
+AarogyaKul_PRD.md
+design.md
+ui-ux-skill.md
