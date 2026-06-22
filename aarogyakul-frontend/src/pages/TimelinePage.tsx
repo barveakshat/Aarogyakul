@@ -102,7 +102,7 @@ export default function TimelinePage() {
                     </div>
                     {event.description ? <p className="mt-2 text-sm leading-6 text-txtS">{event.description}</p> : null}
                     {event.relatedDocumentId ? (
-                      <a className="mt-3 inline-flex text-sm font-medium text-pri hover:underline" href={`/app/upload?document=${event.relatedDocumentId}`}>View related document</a>
+                      <a className="mt-3 inline-flex text-sm font-medium text-pri hover:underline" href={`/app/insights?document=${event.relatedDocumentId}`}>View related document</a>
                     ) : null}
                   </div>
                 </div>

@@ -36,7 +36,7 @@ export function InsightsPage() {
               <div className="mb-4 h-2 rounded-full bg-gradient-to-r from-pri via-aqua to-sec" />
               <h2 className="text-base font-black text-txtP">{doc.fileName}</h2>
               <p className="mt-2 text-sm leading-6 text-txtS">{documentTypeLabel(doc.documentType)} · {formatDate(doc.reportDate)}</p>
-              <Link className="mt-5 inline-flex rounded-btn bg-gradient-to-r from-pri to-sec px-4 py-2 text-sm font-bold text-white" to={`/app/upload?document=${doc.documentId}`}>
+              <Link className="mt-5 inline-flex rounded-btn bg-gradient-to-r from-pri to-sec px-4 py-2 text-sm font-bold text-white" to={`/app/insights?document=${doc.documentId}`}>
                 Review insight
               </Link>
             </Card>

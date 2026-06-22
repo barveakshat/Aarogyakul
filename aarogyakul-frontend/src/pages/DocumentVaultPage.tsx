@@ -45,7 +45,7 @@ export default function DocumentVaultPage() {
       <PageHeader
         title="Document Vault"
         description="Store and organize all your medical documents — reports, prescriptions, bills, insurance, and IDs."
-        action={<Link className="inline-flex items-center gap-2 rounded-btn bg-gradient-to-r from-pri to-sec px-4 py-2 text-sm font-bold text-white shadow-glow" to="/app/upload"><Upload size={16} />Upload</Link>}
+        action={<Link className="inline-flex items-center gap-2 rounded-btn bg-gradient-to-r from-pri to-sec px-4 py-2 text-sm font-bold text-white shadow-glow" to="/app/insights"><Upload size={16} />Upload</Link>}
       />
 
       <div className="mb-6 flex flex-wrap gap-2">
@@ -77,7 +77,7 @@ export default function DocumentVaultPage() {
       ) : (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {filtered.map((doc) => (
-            <Link key={doc.documentId} to={`/app/upload?document=${doc.documentId}`} className="block focus:outline-none focus:ring-4 focus:ring-pri/10 rounded-crd">
+            <Link key={doc.documentId} to={`/app/insights?document=${doc.documentId}`} className="block focus:outline-none focus:ring-4 focus:ring-pri/10 rounded-crd">
               <Card className="h-full p-5 transition duration-200 hover:-translate-y-1 hover:shadow-glow">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">

@@ -79,7 +79,7 @@ export default function DashboardPage() {
       </Card>
 
       <div className="mb-6 grid gap-4 md:grid-cols-3">
-        <QuickLink title="Upload document" text="Add a report, prescription, bill, or ID to your vault." to="/app/upload" icon={Upload} />
+        <QuickLink title="Upload document" text="Add a report, prescription, bill, or ID to your vault." to="/app/insights" icon={Upload} />
         <QuickLink title="Document vault" text="Browse and search all your stored documents." to="/app/vault" icon={FolderArchive} />
         <QuickLink title="Add timeline event" text="Log a doctor visit, test, or health note." to="/app/timeline" icon={Plus} />
       </div>
@@ -95,7 +95,7 @@ export default function DashboardPage() {
           ) : (
             <div className="space-y-3">
               {recentDocs.map((doc) => (
-                <Link key={doc.documentId} to={`/app/upload?document=${doc.documentId}`} className="flex items-center justify-between rounded-xl border border-brd bg-white/70 px-3 py-2.5 hover:border-pri/30 transition-colors">
+                <Link key={doc.documentId} to={`/app/insights?document=${doc.documentId}`} className="flex items-center justify-between rounded-xl border border-brd bg-white/70 px-3 py-2.5 hover:border-pri/30 transition-colors">
                   <div className="min-w-0">
                     <div className="truncate text-sm font-medium text-txtP">{doc.fileName}</div>
                     <div className="text-xs text-txtS">{documentTypeLabel(doc.documentType)}</div>
