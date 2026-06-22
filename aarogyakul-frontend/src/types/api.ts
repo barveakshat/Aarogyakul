@@ -1,8 +1,8 @@
 export type UUID = string
 
-export type DocumentType = 'BLOOD_REPORT' | 'PRESCRIPTION' | 'DISCHARGE_SUMMARY' | 'OTHER'
+export type DocumentType = 'BLOOD_REPORT' | 'LAB_REPORT' | 'PRESCRIPTION' | 'DISCHARGE_SUMMARY' | 'BILL' | 'INSURANCE_DOC' | 'MEDICAL_ID' | 'OTHER'
 export type ProcessingStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED'
-export type TimelineEventType = 'DOCUMENT_UPLOAD' | 'DIAGNOSIS' | 'VACCINATION' | 'DOCTOR_VISIT' | 'SURGERY'
+export type TimelineEventType = 'DOCUMENT_UPLOAD' | 'DIAGNOSIS' | 'VACCINATION' | 'DOCTOR_VISIT' | 'SURGERY' | 'LAB_TEST' | 'MEDICATION_CHANGE' | 'NOTE'
 
 export interface ApiErrorEnvelope {
   error?: {
@@ -114,6 +114,13 @@ export interface DocumentResponse extends DocumentSummaryResponse {
   insight?: InsightResponse
 }
 
+export interface TimelineEventRequest {
+  title: string
+  eventType: TimelineEventType
+  eventDate: string
+  description?: string
+}
+
 export interface TimelineEventResponse {
   id: UUID
   eventType: TimelineEventType
@@ -121,4 +128,5 @@ export interface TimelineEventResponse {
   title: string
   description?: string
   relatedDocumentId?: UUID
+  isManual: boolean
 }

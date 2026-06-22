@@ -1,116 +1,132 @@
-import { FormEvent, useEffect, useState } from 'react'
-import { Alert, Button, Card, EmptyState, LoadingState, PageHeader, TextField } from '../components/ui'
-import { createFamily, createMember, getMyFamily } from '../api/family'
-import type { FamilyResponse } from '../types/api'
-import { FamilyMemberCard } from '../components/FamilyMemberCard'
-import { MemberForm } from '../components/MemberForm'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
+import { useProfile } from '../context/ProfileContext'
+import { listDocuments } from '../api/documents'
+import { listTimeline } from '../api/documents'
+import { Card, LoadingState, PageHeader } from '../components/ui'
+import type { DocumentSummaryResponse, TimelineEventResponse } from '../types/api'
+import { documentTypeLabel, formatDate, formatDateTime, timelineEventLabel } from '../utils/format'
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
+import { Upload, FolderArchive, Plus } from 'lucide-react'
+
+const healthTrendData = [
+  { month: 'Jan', score: 72 },
+  { month: 'Feb', score: 74 },
+  { month: 'Mar', score: 71 },
+  { month: 'Apr', score: 78 },
+  { month: 'May', score: 82 },
+  { month: 'Jun', score: 85 },
+]
 
 export default function DashboardPage() {
-  const [family, setFamily] = useState<FamilyResponse | null>(null)
+  const { activeProfile } = useProfile()
+  const [documents, setDocuments] = useState<DocumentSummaryResponse[]>([])
+  const [timeline, setTimeline] = useState<TimelineEventResponse[]>([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
-  const [familyName, setFamilyName] = useState('')
-  const [creatingFamily, setCreatingFamily] = useState(false)
-
-  const loadFamily = async () => {
-    setLoading(true)
-    setError('')
-    try {
-      setFamily(await getMyFamily())
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Could not load family'
-      if (message.toLowerCase().includes('not found')) {
-        setFamily(null)
-      } else {
-        setError(message)
-      }
-    } finally {
-      setLoading(false)
-    }
-  }
 
   useEffect(() => {
-    void loadFamily()
-  }, [])
+    if (!activeProfile) return
+    setLoading(true)
+    Promise.all([
+      listDocuments(activeProfile.memberId),
+      listTimeline(activeProfile.memberId),
+    ]).then(([docs, events]) => {
+      setDocuments(docs)
+      setTimeline(events)
+    }).finally(() => setLoading(false))
+  }, [activeProfile])
 
-  const handleCreateFamily = async (event: FormEvent) => {
-    event.preventDefault()
-    setCreatingFamily(true)
-    setError('')
-    try {
-      setFamily(await createFamily({ familyName }))
-      setFamilyName('')
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not create family')
-    } finally {
-      setCreatingFamily(false)
-    }
-  }
+  if (loading) return <LoadingState label="Loading dashboard" />
+  if (!activeProfile) return null
 
-  if (loading) return <LoadingState label="Loading family workspace" />
-
-  if (!family) {
-    return (
-      <>
-        <PageHeader title="Set up your family" description="AarogyaKul keeps one family workspace per user for the MVP." />
-        {error ? <div className="mb-4"><Alert message={error} /></div> : null}
-        <EmptyState
-          title="Create your family workspace"
-          description="Once created, you can add members, upload PDF reports, and track generated insights."
-          action={
-            <form className="mx-auto flex max-w-md flex-col gap-3 sm:flex-row" onSubmit={handleCreateFamily}>
-              <TextField label="Family name" value={familyName} onChange={(event) => setFamilyName(event.target.value)} required />
-              <div className="pt-6">
-                <Button type="submit" disabled={creatingFamily}>{creatingFamily ? 'Creating...' : 'Create'}</Button>
-              </div>
-            </form>
-          }
-        />
-      </>
-    )
-  }
+  const recentDocs = documents.slice(0, 4)
+  const recentEvents = timeline.slice(0, 5)
 
   return (
     <>
       <PageHeader
-        title={`${family.familyName} dashboard`}
-        description="A clean command center for members, report uploads, timelines, and clinical notes."
+        title={`Welcome, ${activeProfile.fullName}`}
+        description="Your personal health command center — documents, timeline, and clinical notes."
       />
-      {error ? <div className="mb-4"><Alert message={error} /></div> : null}
+
       <div className="mb-6 grid gap-4 md:grid-cols-4">
-        <StatCard label="Members" value={family.members.length} />
-        <StatCard label="Profiles ready" value={family.members.filter((member) => member.dateOfBirth && member.bloodGroup).length} />
-        <StatCard label="Allergies" value={family.members.reduce((sum, member) => sum + member.allergies.length, 0)} />
-        <StatCard label="Conditions" value={family.members.reduce((sum, member) => sum + member.chronicConditions.length, 0)} />
+        <StatCard label="Documents" value={documents.length} />
+        <StatCard label="Timeline Events" value={timeline.length} />
+        <StatCard label="Allergies" value={activeProfile.allergies.length} />
+        <StatCard label="Conditions" value={activeProfile.chronicConditions.length} />
       </div>
-      <div className="mb-6 grid gap-4 md:grid-cols-3">
-        <QuickLink title="Upload report" text="Choose a member and send a PDF into the AI pipeline." to="/app/reports" />
-        <QuickLink title="Review insights" text="Open completed reports and extracted parameters." to="/app/insights" />
-        <QuickLink title="Health timelines" text="Browse chronological events for every member." to="/app/timelines" />
-      </div>
-      <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
-        <div>
-          {family.members.length > 0 ? (
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-              {family.members.map((member) => <FamilyMemberCard key={member.memberId} member={member} />)}
-            </div>
-          ) : (
-            <EmptyState title="No members yet" description="Add the first family member to start uploading medical documents." />
-          )}
+
+      <Card className="mb-6 p-5">
+        <h2 className="mb-1 text-base font-black text-txtP">Health Score Trend</h2>
+        <p className="mb-4 text-sm text-txtS">Wellness indicator over the past 6 months</p>
+        <div className="h-52 w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={healthTrendData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+              <defs>
+                <linearGradient id="healthGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#6366F1" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="#6366F1" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
+              <XAxis dataKey="month" tick={{ fontSize: 12, fill: '#64748B' }} axisLine={false} tickLine={false} />
+              <YAxis domain={[60, 100]} tick={{ fontSize: 12, fill: '#64748B' }} axisLine={false} tickLine={false} />
+              <Tooltip contentStyle={{ background: '#0F172A', border: 'none', borderRadius: '12px', color: '#fff', fontSize: '13px', fontWeight: 600, padding: '8px 14px' }} labelStyle={{ color: '#94A3B8' }} />
+              <Area type="monotone" dataKey="score" stroke="#6366F1" strokeWidth={2.5} fill="url(#healthGrad)" />
+            </AreaChart>
+          </ResponsiveContainer>
         </div>
+      </Card>
+
+      <div className="mb-6 grid gap-4 md:grid-cols-3">
+        <QuickLink title="Upload document" text="Add a report, prescription, bill, or ID to your vault." to="/app/upload" icon={Upload} />
+        <QuickLink title="Document vault" text="Browse and search all your stored documents." to="/app/vault" icon={FolderArchive} />
+        <QuickLink title="Add timeline event" text="Log a doctor visit, test, or health note." to="/app/timeline" icon={Plus} />
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-2">
         <Card className="p-5">
-          <h2 className="text-base font-black text-txtP">Add family member</h2>
-          <p className="mt-1 text-sm leading-6 text-txtS">Capture just enough information to organize reports safely.</p>
-          <div className="mt-5">
-            <MemberForm
-              submitLabel="Add member"
-              onSubmit={async (payload) => {
-                await createMember(family.familyId, payload)
-                await loadFamily()
-              }}
-            />
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-base font-black text-txtP">Recent Documents</h2>
+            <Link to="/app/vault" className="text-sm font-bold text-pri hover:underline">View all</Link>
           </div>
+          {recentDocs.length === 0 ? (
+            <p className="text-sm text-txtS py-4">No documents uploaded yet.</p>
+          ) : (
+            <div className="space-y-3">
+              {recentDocs.map((doc) => (
+                <Link key={doc.documentId} to={`/app/upload?document=${doc.documentId}`} className="flex items-center justify-between rounded-xl border border-brd bg-white/70 px-3 py-2.5 hover:border-pri/30 transition-colors">
+                  <div className="min-w-0">
+                    <div className="truncate text-sm font-medium text-txtP">{doc.fileName}</div>
+                    <div className="text-xs text-txtS">{documentTypeLabel(doc.documentType)}</div>
+                  </div>
+                  <span className="shrink-0 text-xs text-txtS">{formatDateTime(doc.uploadedAt)}</span>
+                </Link>
+              ))}
+            </div>
+          )}
+        </Card>
+
+        <Card className="p-5">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-base font-black text-txtP">Recent Timeline</h2>
+            <Link to="/app/timeline" className="text-sm font-bold text-pri hover:underline">View all</Link>
+          </div>
+          {recentEvents.length === 0 ? (
+            <p className="text-sm text-txtS py-4">No timeline events yet.</p>
+          ) : (
+            <div className="space-y-3">
+              {recentEvents.map((event) => (
+                <div key={event.id} className="flex items-center justify-between rounded-xl border border-brd bg-white/70 px-3 py-2.5">
+                  <div className="min-w-0">
+                    <div className="truncate text-sm font-medium text-txtP">{event.title}</div>
+                    <div className="text-xs text-txtS">{timelineEventLabel(event.eventType)}</div>
+                  </div>
+                  <span className="shrink-0 text-xs text-txtS">{formatDate(event.eventDate)}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </Card>
       </div>
     </>
@@ -126,11 +142,13 @@ function StatCard({ label, value }: { label: string; value: number }) {
   )
 }
 
-function QuickLink({ title, text, to }: { title: string; text: string; to: string }) {
+function QuickLink({ title, text, to, icon: Icon }: { title: string; text: string; to: string; icon: React.ComponentType<{ className?: string }> }) {
   return (
     <Link to={to} className="block rounded-crd outline-none focus:ring-4 focus:ring-pri/10">
       <Card className="h-full p-5 transition duration-200 hover:-translate-y-1 hover:shadow-glow">
-        <div className="mb-4 h-2 rounded-full bg-gradient-to-r from-pri via-aqua to-pri2" />
+        <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-r from-pri/10 to-sec/10">
+          <Icon className="h-5 w-5 text-pri" />
+        </div>
         <h2 className="text-base font-black text-txtP">{title}</h2>
         <p className="mt-2 text-sm leading-6 text-txtS">{text}</p>
       </Card>

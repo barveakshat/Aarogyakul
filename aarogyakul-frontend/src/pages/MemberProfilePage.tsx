@@ -1,5 +1,5 @@
-import { FormEvent, useEffect, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router'
+import { FormEvent, useCallback, useEffect, useRef, useState } from 'react'
+import { Link, useNavigate } from 'react-router'
 import {
   addAllergy,
   addCondition,
@@ -8,6 +8,7 @@ import {
   deleteMember,
   getMember,
   updateMember,
+  uploadProfilePhoto,
 } from '../api/family'
 import { listDocuments } from '../api/documents'
 import { DocumentList } from '../components/DocumentList'
@@ -15,14 +16,18 @@ import { MemberForm } from '../components/MemberForm'
 import { Alert, Button, Card, LoadingState, PageHeader, SelectField, TextAreaField, TextField } from '../components/ui'
 import type { DocumentSummaryResponse, MemberResponse } from '../types/api'
 import { formatDate, initials } from '../utils/format'
+import { Pencil, X, Upload, ImagePlus } from 'lucide-react'
+import { useProfile } from '../context/ProfileContext'
 
 export default function MemberProfilePage() {
-  const { memberId = '' } = useParams()
+  const { activeProfile, clearProfile } = useProfile()
+  const memberId = activeProfile?.memberId || ''
   const navigate = useNavigate()
   const [member, setMember] = useState<MemberResponse | null>(null)
   const [documents, setDocuments] = useState<DocumentSummaryResponse[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [showPhotoModal, setShowPhotoModal] = useState(false)
 
   const load = async () => {
     setLoading(true)
@@ -45,7 +50,8 @@ export default function MemberProfilePage() {
   const handleDelete = async () => {
     if (!window.confirm('Delete this member and their linked records?')) return
     await deleteMember(memberId)
-    navigate('/app')
+    clearProfile()
+    navigate('/app/profiles')
   }
 
   if (loading) return <LoadingState label="Loading member profile" />
@@ -55,8 +61,7 @@ export default function MemberProfilePage() {
     <>
       <PageHeader
         title={member.fullName}
-        description="Profile, clinical notes, reports, and AI-generated results for this family member."
-        action={<Link className="inline-flex rounded-btn bg-gradient-to-r from-pri to-pri2 px-4 py-2 text-sm font-bold text-white shadow-glow" to={`/member/${memberId}/upload`}>Upload PDF</Link>}
+        description="Profile, clinical notes, and AI-generated results."
       />
       {error ? <div className="mb-4"><Alert message={error} /></div> : null}
 
@@ -64,11 +69,21 @@ export default function MemberProfilePage() {
         <div className="space-y-6">
           <Card className="p-5">
             <div className="flex items-start gap-4">
-              {member.profilePhotoUrl ? (
-                <img className="h-20 w-20 rounded-3xl object-cover shadow-crd" src={member.profilePhotoUrl} alt={`${member.fullName} profile`} />
-              ) : (
-                <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-br from-mint to-emerald-100 text-lg font-black text-pri">{initials(member.fullName)}</div>
-              )}
+              <div className="relative group shrink-0">
+                {member.profilePhotoUrl ? (
+                  <img className="h-20 w-20 rounded-full object-cover shadow-crd" src={member.profilePhotoUrl} alt={`${member.fullName} profile`} />
+                ) : (
+                  <div className="flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-pri/15 to-sec/15 text-lg font-black text-pri">{initials(member.fullName)}</div>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setShowPhotoModal(true)}
+                  className="absolute bottom-0 right-0 flex h-7 w-7 items-center justify-center rounded-full bg-pri text-white shadow-lg transition-all duration-200 hover:scale-110 hover:bg-sec"
+                  title="Change photo"
+                >
+                  <Pencil size={13} />
+                </button>
+              </div>
               <div className="min-w-0">
                 <h2 className="text-xl font-black text-txtP">{member.fullName}</h2>
                 <p className="text-sm text-txtS">{member.relationshipToOwner || 'Family member'}</p>
@@ -132,6 +147,18 @@ export default function MemberProfilePage() {
           </Card>
         </div>
       </div>
+
+      {showPhotoModal && member && (
+        <PhotoUploadModal
+          memberName={member.fullName}
+          memberId={memberId}
+          onClose={() => setShowPhotoModal(false)}
+          onUploaded={async () => {
+            setShowPhotoModal(false)
+            await load()
+          }}
+        />
+      )}
     </>
   )
 }
@@ -141,6 +168,136 @@ function ProfileFact({ label, value }: { label: string; value: string }) {
     <div>
       <dt className="text-xs font-medium uppercase tracking-wide text-txtS">{label}</dt>
       <dd className="mt-1 font-medium text-txtP">{value}</dd>
+    </div>
+  )
+}
+
+function PhotoUploadModal({
+  memberName,
+  memberId,
+  onClose,
+  onUploaded,
+}: {
+  memberName: string
+  memberId: string
+  onClose: () => void
+  onUploaded: () => Promise<void>
+}) {
+  const [dragActive, setDragActive] = useState(false)
+  const [preview, setPreview] = useState<string | null>(null)
+  const [file, setFile] = useState<File | null>(null)
+  const [uploading, setUploading] = useState(false)
+  const [error, setError] = useState('')
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  const handleFile = useCallback((f: File) => {
+    if (!f.type.startsWith('image/')) {
+      setError('Please select an image file (JPG, PNG, etc.)')
+      return
+    }
+    if (f.size > 5 * 1024 * 1024) {
+      setError('Image must be under 5 MB')
+      return
+    }
+    setError('')
+    setFile(f)
+    setPreview(URL.createObjectURL(f))
+  }, [])
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    setDragActive(false)
+    const dropped = e.dataTransfer.files[0]
+    if (dropped) handleFile(dropped)
+  }, [handleFile])
+
+  const handleUpload = async () => {
+    if (!file) return
+    setUploading(true)
+    setError('')
+    try {
+      await uploadProfilePhoto(memberId, file)
+      await onUploaded()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Upload failed')
+      setUploading(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fdIn" onClick={onClose}>
+      <div
+        className="relative mx-4 w-full max-w-md rounded-crd border border-brd bg-white p-6 shadow-glow"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button
+          onClick={onClose}
+          className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full text-txtS transition-colors hover:bg-brd/50 hover:text-txtP"
+        >
+          <X size={18} />
+        </button>
+
+        <h3 className="text-lg font-black text-txtP">Update profile photo</h3>
+        <p className="mt-1 text-sm text-txtS">Upload a new photo for {memberName}</p>
+
+        <div
+          className={`mt-5 flex flex-col items-center justify-center rounded-2xl border-2 border-dashed p-8 transition-colors duration-200 ${
+            dragActive
+              ? 'border-pri bg-pri/5'
+              : preview
+                ? 'border-brd bg-white'
+                : 'border-brd bg-slate-50/50 hover:border-pri/50 hover:bg-pri/[0.02]'
+          }`}
+          onDragOver={(e) => { e.preventDefault(); setDragActive(true) }}
+          onDragLeave={() => setDragActive(false)}
+          onDrop={handleDrop}
+        >
+          {preview ? (
+            <div className="flex flex-col items-center gap-4">
+              <img src={preview} alt="Preview" className="h-28 w-28 rounded-full object-cover shadow-crd" />
+              <button
+                type="button"
+                className="text-sm font-semibold text-pri hover:underline"
+                onClick={() => { setPreview(null); setFile(null) }}
+              >
+                Choose different image
+              </button>
+            </div>
+          ) : (
+            <>
+              <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-pri/10">
+                <ImagePlus size={26} className="text-pri" />
+              </div>
+              <p className="text-sm font-semibold text-txtP">Drag & drop an image here</p>
+              <p className="mt-1 text-xs text-txtS">or click to browse · JPG, PNG up to 5 MB</p>
+              <button
+                type="button"
+                className="mt-4 rounded-btn border border-brd bg-white px-4 py-2 text-sm font-bold text-pri transition-colors hover:border-pri hover:bg-pri/5"
+                onClick={() => inputRef.current?.click()}
+              >
+                Browse files
+              </button>
+            </>
+          )}
+          <input
+            ref={inputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f) }}
+          />
+        </div>
+
+        {error && <p className="mt-3 text-sm font-medium text-crit">{error}</p>}
+
+        <div className="mt-5 flex gap-3">
+          <Button variant="secondary" className="flex-1" onClick={onClose} disabled={uploading}>Cancel</Button>
+          <Button className="flex-1 gap-2" onClick={handleUpload} disabled={!file || uploading}>
+            <Upload size={16} />
+            {uploading ? 'Uploading...' : 'Upload'}
+          </Button>
+        </div>
+      </div>
     </div>
   )
 }

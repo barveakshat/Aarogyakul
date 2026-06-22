@@ -47,7 +47,11 @@ public final class Dtos {
                                     BigDecimal referenceRangeLow, BigDecimal referenceRangeHigh) {}
     public record InsightResponse(String summaryText, Map<String, Object> comparisonJson) {}
     public record TimelineEventResponse(UUID id, TimelineEventType eventType, LocalDate eventDate,
-                                        String title, String description, UUID relatedDocumentId) {}
+                                        String title, String description, UUID relatedDocumentId,
+                                        boolean isManual) {}
+
+    public record TimelineEventRequest(@NotBlank String title, @NotNull TimelineEventType eventType,
+                                       @NotNull LocalDate eventDate, String description) {}
 
     public record ExtractedReport(LocalDate reportDate, List<ExtractedParameter> parameters) {}
     public record ExtractedParameter(String name, BigDecimal value, String unit,

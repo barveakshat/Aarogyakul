@@ -2,7 +2,7 @@ AarogyaKul — Design System (Modern Vibrant Split-Pane)
 
 1. Architectural Layout
 
-The application follows a rigid 2-pane SaaS layout using a full-screen flex container (h-screen w-full flex overflow-hidden).
+The application follows a rigid 3-pane SaaS layout using a full-screen flex container (h-screen w-full flex overflow-hidden).
 
 Left Pane (Sidebar): Fixed width w-64 or w-[260px], full height, rich midnight navy background. Contains branding, user profile block, and primary navigation.
 
@@ -104,6 +104,13 @@ Subtext: text-sm text-txtS max-w-md mb-8 leading-relaxed
 
 Primary Button: flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-pri to-sec text-white rounded-xl text-sm font-semibold shadow-lg shadow-pri/30 hover:shadow-pri/50 hover:-translate-y-0.5 transition-all duration-300
 
+3.4 Right Panel
+
+Layout: w-[320px] border-l border-brd bg-bg flex flex-col
+
+Header: p-5 border-b border-brd flex justify-between items-center bg-slate-50/50
+
+Button: bg-white border border-brd text-pri px-4 py-2 rounded-lg text-sm font-semibold hover:bg-slate-50 transition-colors shadow-sm
 
 4. Tailwind Configuration
 

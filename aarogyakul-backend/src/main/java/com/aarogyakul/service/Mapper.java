@@ -5,6 +5,7 @@ import com.aarogyakul.entity.*;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Component;
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 
@@ -12,10 +13,12 @@ import java.util.Map;
 public class Mapper {
     private final AllergyRepositoryFacade allergyFacade;
     private final ObjectMapper objectMapper;
+    private final StorageService storage;
 
-    public Mapper(AllergyRepositoryFacade allergyFacade, ObjectMapper objectMapper) {
+    public Mapper(AllergyRepositoryFacade allergyFacade, ObjectMapper objectMapper, StorageService storage) {
         this.allergyFacade = allergyFacade;
         this.objectMapper = objectMapper;
+        this.storage = storage;
     }
 
     public FamilyResponse family(Family family, List<MemberResponse> members) {
@@ -24,8 +27,13 @@ public class Mapper {
 
     public MemberResponse member(FamilyMember member) {
         return new MemberResponse(member.id, member.family.id, member.fullName, member.dateOfBirth,
-                member.gender, member.bloodGroup, member.relationshipToOwner, member.profilePhotoUrl,
+                member.gender, member.bloodGroup, member.relationshipToOwner, resolvePhotoUrl(member.profilePhotoUrl),
                 allergyFacade.allergies(member), allergyFacade.conditions(member));
+    }
+
+    private String resolvePhotoUrl(String key) {
+        if (key == null || key.isBlank()) return null;
+        return storage.presignedUrl(key, Duration.ofHours(1));
     }
 
     public AllergyResponse allergy(Allergy allergy) {

@@ -51,7 +51,7 @@ public class DocumentService {
         document.fileName = Optional.ofNullable(file.getOriginalFilename()).orElse("report.pdf");
         document.fileSizeBytes = file.getSize();
         document.mimeType = Optional.ofNullable(file.getContentType()).orElse("application/pdf");
-        document.processingStatus = ProcessingStatus.PENDING;
+        document.processingStatus = requiresAiProcessing(document.documentType) ? ProcessingStatus.PENDING : ProcessingStatus.COMPLETED;
         document.fileUrl = "pending";
         document = documents.save(document);
 
@@ -59,18 +59,25 @@ public class DocumentService {
         String key = "documents/%s/%s.pdf".formatted(member.id, document.id);
         document.fileUrl = storage.put(key, temp, document.mimeType);
         documents.save(document);
-        UUID documentId = document.id;
-        if (TransactionSynchronizationManager.isSynchronizationActive()) {
-            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-                @Override
-                public void afterCommit() {
-                    processingService.process(documentId, temp);
-                }
-            });
-        } else {
-            processingService.process(documentId, temp);
+
+        if (requiresAiProcessing(document.documentType)) {
+            UUID documentId = document.id;
+            if (TransactionSynchronizationManager.isSynchronizationActive()) {
+                TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        processingService.process(documentId, temp);
+                    }
+                });
+            } else {
+                processingService.process(documentId, temp);
+            }
         }
         return new DocumentUploadResponse(document.id, document.fileName, document.documentType, document.processingStatus, document.uploadedAt);
+    }
+
+    private boolean requiresAiProcessing(DocumentType type) {
+        return type == DocumentType.BLOOD_REPORT || type == DocumentType.LAB_REPORT;
     }
 
     @Transactional(readOnly = true)

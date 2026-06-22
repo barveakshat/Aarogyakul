@@ -6,6 +6,10 @@ import com.aarogyakul.exception.ApiException;
 import com.aarogyakul.repository.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Optional;
 import java.util.List;
 import java.util.UUID;
 
@@ -15,14 +19,16 @@ public class MemberService {
     private final FamilyMemberRepository members;
     private final AllergyRepository allergies;
     private final ChronicConditionRepository conditions;
+    private final StorageService storage;
     private final Mapper mapper;
 
     public MemberService(FamilyService familyService, FamilyMemberRepository members, AllergyRepository allergies,
-                         ChronicConditionRepository conditions, Mapper mapper) {
+                         ChronicConditionRepository conditions, StorageService storage, Mapper mapper) {
         this.familyService = familyService;
         this.members = members;
         this.allergies = allergies;
         this.conditions = conditions;
+        this.storage = storage;
         this.mapper = mapper;
     }
 
@@ -50,6 +56,36 @@ public class MemberService {
     public MemberResponse update(UUID memberId, UUID userId, MemberRequest request) {
         FamilyMember member = requireOwnedMember(memberId, userId);
         apply(member, request);
+        return mapper.member(members.save(member));
+    }
+
+    @Transactional
+    public MemberResponse uploadProfilePhoto(UUID memberId, UUID userId, MultipartFile file) {
+        FamilyMember member = requireOwnedMember(memberId, userId);
+        
+        if (file == null || file.isEmpty()) {
+            throw ApiException.validation("Photo file is required");
+        }
+        
+        String originalFilename = Optional.ofNullable(file.getOriginalFilename()).orElse("photo.jpg");
+        String ext = "jpg";
+        int extIndex = originalFilename.lastIndexOf('.');
+        if (extIndex > 0) {
+            ext = originalFilename.substring(extIndex + 1);
+        }
+        
+        Path temp;
+        try {
+            temp = Files.createTempFile("aarogyakul-photo-", "." + ext);
+            file.transferTo(temp);
+        } catch (Exception e) {
+            throw ApiException.processing("Could not prepare uploaded photo");
+        }
+        
+        String mimeType = Optional.ofNullable(file.getContentType()).orElse("image/jpeg");
+        String key = "photos/%s/%s.%s".formatted(member.id, UUID.randomUUID(), ext);
+        
+        member.profilePhotoUrl = storage.put(key, temp, mimeType);
         return mapper.member(members.save(member));
     }
 
@@ -108,6 +144,5 @@ public class MemberService {
         member.gender = request.gender();
         member.bloodGroup = request.bloodGroup();
         member.relationshipToOwner = request.relationshipToOwner();
-        member.profilePhotoUrl = request.profilePhotoUrl();
     }
 }

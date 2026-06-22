@@ -1,9 +1,56 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
 @import "tailwindcss";
 
+@theme {
+  /* ── Color Palette (design.md tokens) ── */
+  --color-sbBg: #0A0F1C;
+  --color-sbA: #1E293B;
+  --color-sbT: #94A3B8;
+  --color-pri: #6366F1;
+  --color-sec: #8B5CF6;
+  --color-bg: #FFFFFF;
+  --color-txtP: #0F172A;
+  --color-txtS: #64748B;
+  --color-brd: #E2E8F0;
+  --color-norm: #16A34A;
+  --color-warn: #D97706;
+  --color-crit: #DC2626;
+
+  /* Extended palette used across components */
+  --color-pri2: #8B5CF6;
+  --color-aqua: #06B6D4;
+  --color-mint: #E0F2FE;
+
+  /* ── Typography ── */
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+
+  /* ── Border Radius ── */
+  --radius-crd: 20px;
+  --radius-btn: 999px;
+
+  /* ── Box Shadows ── */
+  --shadow-crd: 0 18px 50px -28px rgba(99, 102, 241, 0.38);
+  --shadow-glow: 0 22px 60px -32px rgba(99, 102, 241, 0.55);
+
+  /* ── Keyframes ── */
+  --animate-flt: flt 4s ease-in-out infinite;
+  --animate-fdIn: fdIn 0.5s ease-out forwards;
+
+  @keyframes flt {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-12px); }
+  }
+
+  @keyframes fdIn {
+    0% { opacity: 0; transform: translateY(10px); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
+}
+
 :root {
-  color: #11312D;
-  background: #F3FBF8;
-  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  color: #0F172A;
+  background: #FFFFFF;
+  font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -19,9 +66,9 @@ body {
   min-width: 320px;
   min-height: 100vh;
   background:
-    radial-gradient(circle at 8% 0%, rgba(20, 184, 166, 0.18), transparent 28rem),
-    radial-gradient(circle at 100% 10%, rgba(74, 222, 128, 0.16), transparent 26rem),
-    linear-gradient(135deg, #F3FBF8 0%, #F8FFFC 45%, #EFFAF8 100%);
+    radial-gradient(circle at 8% 0%, rgba(99, 102, 241, 0.08), transparent 28rem),
+    radial-gradient(circle at 100% 10%, rgba(139, 92, 246, 0.06), transparent 26rem),
+    linear-gradient(135deg, #FAFAFF 0%, #FFFFFF 45%, #F8F7FF 100%);
 }
 
 #root {
@@ -43,8 +90,8 @@ select {
 }
 
 ::selection {
-  background: rgba(20, 184, 166, 0.2);
-  color: #064E3B;
+  background: rgba(99, 102, 241, 0.2);
+  color: #312E81;
 }
 
 @media (prefers-reduced-motion: reduce) {
