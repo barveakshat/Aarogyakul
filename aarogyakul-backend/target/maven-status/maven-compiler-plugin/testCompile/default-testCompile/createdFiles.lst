@@ -1,7 +1,0 @@
-com\aarogyakul\AarogyaKulBackendApplicationTest.class
-com\aarogyakul\service\ai\ComparisonServiceTest.class
-com\aarogyakul\service\ai\ParameterExtractionServiceTest.class
-com\aarogyakul\util\ParameterUtilsTest.class
-com\aarogyakul\live\LivePipelineIntegrationTest.class
-com\aarogyakul\live\LiveExternalServicesTest.class
-com\aarogyakul\live\LivePipelineIntegrationTest$1.class
