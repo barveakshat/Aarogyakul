@@ -5,7 +5,10 @@ import com.aarogyakul.security.CurrentUser;
 import com.aarogyakul.service.MemberService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 import java.util.UUID;
 
@@ -38,6 +41,13 @@ public class MemberController {
     @PutMapping("/api/members/{memberId}")
     public MemberResponse update(@PathVariable UUID memberId, @Valid @RequestBody MemberRequest request) {
         return memberService.update(memberId, currentUser.id(), request);
+    }
+
+    @PostMapping(value = "/api/members/{memberId}/photo", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<MemberResponse> uploadProfilePhoto(
+            @PathVariable UUID memberId,
+            @RequestParam("file") MultipartFile file) {
+        return ResponseEntity.ok(memberService.uploadProfilePhoto(memberId, currentUser.id(), file));
     }
 
     @DeleteMapping("/api/members/{memberId}")

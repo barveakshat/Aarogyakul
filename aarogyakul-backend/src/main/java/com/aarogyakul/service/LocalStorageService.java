@@ -33,7 +33,7 @@ public class LocalStorageService implements StorageService {
 
     @Override
     public String presignedUrl(String key, Duration duration) {
-        return root.resolve(key).toAbsolutePath().toString();
+        return "/api/files/" + key;
     }
 
     @Override

@@ -62,3 +62,14 @@ export async function addCondition(memberId: UUID, payload: ChronicConditionRequ
 export async function deleteCondition(memberId: UUID, conditionId: UUID) {
   await api.delete(`/api/members/${memberId}/conditions/${conditionId}`)
 }
+
+export async function uploadProfilePhoto(memberId: UUID, file: File) {
+  const formData = new FormData()
+  formData.append('file', file)
+  const { data } = await api.post<MemberResponse>(`/api/members/${memberId}/photo`, formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  })
+  return data
+}

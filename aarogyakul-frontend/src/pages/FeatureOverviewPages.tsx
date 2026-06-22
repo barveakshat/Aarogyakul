@@ -1,96 +1,42 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useState } from 'react'
 import { Link } from 'react-router'
-import { getMyFamily } from '../api/family'
+import { useProfile } from '../context/ProfileContext'
 import { listDocuments } from '../api/documents'
-import { Card, EmptyState, LoadingState, PageHeader, StatusBadge } from '../components/ui'
-import type { DocumentSummaryResponse, FamilyResponse, MemberResponse } from '../types/api'
-import { documentTypeLabel, formatDateTime } from '../utils/format'
+import { Card, EmptyState, LoadingState, PageHeader } from '../components/ui'
+import type { DocumentSummaryResponse } from '../types/api'
+import { documentTypeLabel, formatDate } from '../utils/format'
+import { useEffect } from 'react'
 
-type MemberDocuments = { member: MemberResponse; documents: DocumentSummaryResponse[] }
-
-function useFamilyDocuments() {
-  const [family, setFamily] = useState<FamilyResponse | null>(null)
-  const [rows, setRows] = useState<MemberDocuments[]>([])
+export function InsightsPage() {
+  const { activeProfile } = useProfile()
+  const [documents, setDocuments] = useState<DocumentSummaryResponse[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    async function load() {
-      try {
-        const nextFamily = await getMyFamily()
-        const nextRows = await Promise.all(
-          nextFamily.members.map(async (member) => ({ member, documents: await listDocuments(member.memberId) })),
-        )
-        setFamily(nextFamily)
-        setRows(nextRows)
-      } finally {
-        setLoading(false)
-      }
-    }
-    void load()
-  }, [])
+    if (!activeProfile) return
+    setLoading(true)
+    listDocuments(activeProfile.memberId)
+      .then(setDocuments)
+      .finally(() => setLoading(false))
+  }, [activeProfile])
 
-  return { family, rows, loading }
-}
-
-export function ReportsPage() {
-  const { rows, loading } = useFamilyDocuments()
-  const documents = useMemo(
-    () => rows.flatMap(({ member, documents }) => documents.map((document) => ({ member, document }))),
-    [rows],
-  )
-
-  if (loading) return <LoadingState label="Loading reports" />
-
-  return (
-    <>
-      <PageHeader title="Reports" description="All uploaded medical PDFs across your family workspace, grouped into a processing-friendly view." />
-      {documents.length === 0 ? (
-        <EmptyState title="No reports yet" description="Open a member profile to upload the first PDF report." />
-      ) : (
-        <div className="grid gap-4">
-          {documents.map(({ member, document }) => (
-            <Card key={document.documentId} className="p-5">
-              <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                <div>
-                  <div className="text-sm font-black text-txtP">{document.fileName}</div>
-                  <p className="mt-1 text-sm text-txtS">{member.fullName} · {documentTypeLabel(document.documentType)} · {formatDateTime(document.uploadedAt)}</p>
-                </div>
-                <div className="flex flex-wrap items-center gap-3">
-                  <StatusBadge status={document.processingStatus} />
-                  <Link className="rounded-btn border border-brd bg-white px-4 py-2 text-sm font-bold text-pri hover:border-pri" to={`/member/${member.memberId}/upload?document=${document.documentId}`}>
-                    Open
-                  </Link>
-                </div>
-              </div>
-            </Card>
-          ))}
-        </div>
-      )}
-    </>
-  )
-}
-
-export function InsightsPage() {
-  const { rows, loading } = useFamilyDocuments()
-  const completed = rows.flatMap(({ member, documents }) =>
-    documents.filter((document) => document.processingStatus === 'COMPLETED').map((document) => ({ member, document })),
-  )
+  const completed = documents.filter((d) => d.processingStatus === 'COMPLETED')
 
   if (loading) return <LoadingState label="Loading insights" />
 
   return (
     <>
-      <PageHeader title="AI insights" description="A focused queue of completed reports that are ready for extracted parameters and summaries." />
+      <PageHeader title="AI Insights" description="Completed reports with extracted parameters and AI-generated summaries." />
       {completed.length === 0 ? (
-        <EmptyState title="No AI insights yet" description="Completed report summaries will appear here after processing finishes." />
+        <EmptyState title="No AI insights yet" description="Upload a blood or lab report to generate AI-powered health insights." />
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
-          {completed.map(({ member, document }) => (
-            <Card key={document.documentId} className="p-5">
-              <div className="mb-4 h-2 rounded-full bg-gradient-to-r from-pri via-aqua to-pri2" />
-              <h2 className="text-base font-black text-txtP">{document.fileName}</h2>
-              <p className="mt-2 text-sm leading-6 text-txtS">{member.fullName} · {documentTypeLabel(document.documentType)}</p>
-              <Link className="mt-5 inline-flex rounded-btn bg-gradient-to-r from-pri to-pri2 px-4 py-2 text-sm font-bold text-white" to={`/member/${member.memberId}/upload?document=${document.documentId}`}>
+          {completed.map((doc) => (
+            <Card key={doc.documentId} className="p-5">
+              <div className="mb-4 h-2 rounded-full bg-gradient-to-r from-pri via-aqua to-sec" />
+              <h2 className="text-base font-black text-txtP">{doc.fileName}</h2>
+              <p className="mt-2 text-sm leading-6 text-txtS">{documentTypeLabel(doc.documentType)} · {formatDate(doc.reportDate)}</p>
+              <Link className="mt-5 inline-flex rounded-btn bg-gradient-to-r from-pri to-sec px-4 py-2 text-sm font-bold text-white" to={`/app/upload?document=${doc.documentId}`}>
                 Review insight
               </Link>
             </Card>
@@ -101,69 +47,71 @@ export function InsightsPage() {
   )
 }
 
-export function TimelinesPage() {
-  const { family, loading } = useFamilyDocuments()
-  if (loading) return <LoadingState label="Loading timeline shortcuts" />
-
-  return (
-    <>
-      <PageHeader title="Timelines" description="Jump into each member's chronological health story from report uploads and generated events." />
-      {!family?.members.length ? (
-        <EmptyState title="No members yet" description="Add a member to unlock timeline navigation." />
-      ) : (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {family.members.map((member) => (
-            <Card key={member.memberId} className="p-5">
-              <h2 className="text-lg font-black text-txtP">{member.fullName}</h2>
-              <p className="mt-1 text-sm text-txtS">{member.relationshipToOwner || 'Family member'}</p>
-              <Link className="mt-5 inline-flex rounded-btn border border-brd bg-white px-4 py-2 text-sm font-bold text-pri hover:border-pri" to={`/member/${member.memberId}/timeline`}>
-                Open timeline
-              </Link>
-            </Card>
-          ))}
-        </div>
-      )}
-    </>
-  )
-}
-
 export function ClinicalPage() {
-  const { family, loading } = useFamilyDocuments()
-  if (loading) return <LoadingState label="Loading clinical notes" />
+  const { activeProfile } = useProfile()
+
+  if (!activeProfile) return null
+
+  const member = activeProfile
 
   return (
     <>
-      <PageHeader title="Clinical notes" description="Allergies, chronic conditions, and profile details stay organized per family member." />
-      {!family?.members.length ? (
-        <EmptyState title="No clinical profiles yet" description="Add a member to start recording allergies and chronic conditions." />
-      ) : (
-        <div className="grid gap-4 md:grid-cols-2">
-          {family.members.map((member) => (
-            <Card key={member.memberId} className="p-5">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <h2 className="text-lg font-black text-txtP">{member.fullName}</h2>
-                  <p className="mt-1 text-sm text-txtS">{member.bloodGroup || 'Blood group not set'} · {member.gender || 'Gender not set'}</p>
-                </div>
-                <Link className="rounded-btn bg-mint px-4 py-2 text-sm font-bold text-pri" to={`/member/${member.memberId}`}>Edit</Link>
-              </div>
-              <div className="mt-5 grid grid-cols-2 gap-3">
-                <Metric label="Allergies" value={member.allergies.length} />
-                <Metric label="Conditions" value={member.chronicConditions.length} />
-              </div>
-            </Card>
-          ))}
-        </div>
-      )}
-    </>
-  )
-}
+      <PageHeader title="Clinical Notes" description={`Allergies and chronic conditions for ${member.fullName}.`} />
+      <div className="grid gap-5 md:grid-cols-2">
+        <Card className="p-5">
+          <h3 className="flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-txtS mb-4">
+            <span className="flex h-5 w-5 items-center justify-center rounded-md bg-warn/10 text-warn text-xs">!</span>
+            Allergies
+            <span className="ml-auto rounded-full bg-brd/60 px-2 py-0.5 text-xs tabular-nums">{member.allergies.length}</span>
+          </h3>
+          {member.allergies.length === 0 ? (
+            <p className="rounded-xl bg-slate-50 px-3 py-2.5 text-sm text-txtS">No allergies recorded</p>
+          ) : (
+            <ul className="space-y-2">
+              {member.allergies.map((a) => (
+                <li key={a.id} className="rounded-xl border border-brd bg-white/70 px-3 py-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-semibold text-txtP">{a.allergen}</span>
+                    {a.severity && (
+                      <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${
+                        a.severity === 'SEVERE' ? 'bg-crit/10 text-crit' :
+                        a.severity === 'MODERATE' ? 'bg-warn/10 text-warn' :
+                        'bg-norm/10 text-norm'
+                      }`}>{a.severity.charAt(0) + a.severity.slice(1).toLowerCase()}</span>
+                    )}
+                  </div>
+                  {a.notes && <p className="mt-1 text-xs leading-relaxed text-txtS">{a.notes}</p>}
+                </li>
+              ))}
+            </ul>
+          )}
+          <Link to="/app/profile" className="mt-4 inline-flex text-sm font-bold text-pri hover:underline">Manage in profile →</Link>
+        </Card>
 
-function Metric({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="rounded-2xl border border-brd bg-white/70 p-4">
-      <div className="text-2xl font-black text-pri">{value}</div>
-      <div className="mt-1 text-xs font-bold uppercase tracking-wide text-txtS">{label}</div>
-    </div>
+        <Card className="p-5">
+          <h3 className="flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-txtS mb-4">
+            <span className="flex h-5 w-5 items-center justify-center rounded-md bg-pri/10 text-pri text-xs">♥</span>
+            Chronic Conditions
+            <span className="ml-auto rounded-full bg-brd/60 px-2 py-0.5 text-xs tabular-nums">{member.chronicConditions.length}</span>
+          </h3>
+          {member.chronicConditions.length === 0 ? (
+            <p className="rounded-xl bg-slate-50 px-3 py-2.5 text-sm text-txtS">No chronic conditions recorded</p>
+          ) : (
+            <ul className="space-y-2">
+              {member.chronicConditions.map((c) => (
+                <li key={c.id} className="rounded-xl border border-brd bg-white/70 px-3 py-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-semibold text-txtP">{c.conditionName}</span>
+                    {c.diagnosedDate && <span className="text-xs text-txtS">Since {formatDate(c.diagnosedDate)}</span>}
+                  </div>
+                  {c.notes && <p className="mt-1 text-xs leading-relaxed text-txtS">{c.notes}</p>}
+                </li>
+              ))}
+            </ul>
+          )}
+          <Link to="/app/profile" className="mt-4 inline-flex text-sm font-bold text-pri hover:underline">Manage in profile →</Link>
+        </Card>
+      </div>
+    </>
   )
 }

@@ -4,6 +4,7 @@ import type {
   DocumentSummaryResponse,
   DocumentType,
   DocumentUploadResponse,
+  TimelineEventRequest,
   TimelineEventResponse,
   UUID,
 } from '../types/api'
@@ -36,4 +37,13 @@ export async function deleteDocument(documentId: UUID) {
 export async function listTimeline(memberId: UUID) {
   const { data } = await api.get<TimelineEventResponse[]>(`/api/members/${memberId}/timeline`)
   return data
+}
+
+export async function createTimelineEvent(memberId: UUID, request: TimelineEventRequest) {
+  const { data } = await api.post<TimelineEventResponse>(`/api/members/${memberId}/timeline`, request)
+  return data
+}
+
+export async function deleteTimelineEvent(memberId: UUID, eventId: UUID) {
+  await api.delete(`/api/members/${memberId}/timeline/${eventId}`)
 }
