@@ -12,7 +12,7 @@ import MemberProfilePage from './pages/MemberProfilePage'
 import TimelinePage from './pages/TimelinePage'
 import UploadPage from './pages/UploadPage'
 import DocumentVaultPage from './pages/DocumentVaultPage'
-import { ClinicalPage, InsightsPage } from './pages/FeatureOverviewPages'
+import { ClinicalPage } from './pages/FeatureOverviewPages'
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
@@ -47,11 +47,10 @@ function App() {
         >
           <Route path="/app" element={<DashboardPage />} />
           <Route path="/app/vault" element={<DocumentVaultPage />} />
-          <Route path="/app/insights" element={<InsightsPage />} />
+          <Route path="/app/insights" element={<UploadPage />} />
           <Route path="/app/timeline" element={<TimelinePage />} />
           <Route path="/app/clinical" element={<ClinicalPage />} />
           <Route path="/app/profile" element={<MemberProfilePage />} />
-          <Route path="/app/upload" element={<UploadPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

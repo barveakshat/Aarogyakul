@@ -18,7 +18,6 @@ function usePageTitle() {
     item.end ? pathname === item.to : pathname.startsWith(item.to),
   )
   if (match) return match.label
-  if (pathname.includes('/upload')) return 'Upload Document'
   if (pathname.includes('/profile')) return 'Edit Profile'
   return 'AarogyaKul'
 }

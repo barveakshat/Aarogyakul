@@ -4,7 +4,7 @@ import { getDocument, listDocuments, uploadDocument } from '../api/documents'
 import { Alert, Button, Card, EmptyState, LoadingState, PageHeader, SelectField, StatusBadge } from '../components/ui'
 import type { DocumentResponse, DocumentSummaryResponse, DocumentType } from '../types/api'
 import { documentTypeLabel, formatDate, formatDateTime } from '../utils/format'
-import { Sparkles } from 'lucide-react'
+import { Sparkles, Plus, X } from 'lucide-react'
 import { useProfile } from '../context/ProfileContext'
 
 const maxPdfSize = 15 * 1024 * 1024
@@ -21,6 +21,7 @@ export default function UploadPage() {
   const [loading, setLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState('')
+  const [showUploadModal, setShowUploadModal] = useState(false)
 
   const selectedDocumentId = searchParams.get('document')
 
@@ -89,63 +90,76 @@ export default function UploadPage() {
   return (
     <>
       <PageHeader
-        title={`Upload documents${activeProfile ? ` for ${activeProfile.fullName}` : ''}`}
-        description="Upload medical documents. Blood and lab reports are automatically processed by the AI pipeline."
+        title={`AI Insights${activeProfile ? ` — ${activeProfile.fullName}` : ''}`}
+        description="Upload medical documents and view AI-powered analysis. Blood and lab reports are automatically processed."
+        action={
+          <button
+            onClick={() => setShowUploadModal(true)}
+            className="inline-flex items-center gap-2 rounded-btn bg-gradient-to-r from-pri to-sec px-5 py-2.5 text-sm font-bold text-white shadow-glow transition-all hover:shadow-[0_0_30px_rgba(99,102,241,0.4)]"
+          >
+            <Plus size={16} /> Upload
+          </button>
+        }
       />
       {error ? <div className="mb-4"><Alert message={error} /></div> : null}
 
-      <div className="grid gap-6 lg:grid-cols-[420px_1fr]">
-        <Card className="p-5">
-          <h2 className="text-base font-black text-txtP">New PDF upload</h2>
-          <p className="mt-1 text-sm leading-6 text-txtS">Accepted file type is PDF only. Maximum size is 15MB.</p>
-          <form className="mt-5 space-y-4" onSubmit={handleUpload}>
-            <SelectField label="Document type" value={documentType} onChange={(event) => setDocumentType(event.target.value as DocumentType)}>
-              {documentTypes.map((type) => <option key={type} value={type}>{documentTypeLabel(type)}</option>)}
-            </SelectField>
-            <label className="block">
-              <span className="mb-1.5 block text-sm font-medium text-txtP">PDF file</span>
-              <input
-                className="block w-full rounded-2xl border border-brd bg-white/85 px-3 py-2 text-sm text-txtP file:mr-4 file:rounded-btn file:border-0 file:bg-gradient-to-r file:from-pri file:to-pri2 file:px-3 file:py-1.5 file:text-sm file:font-bold file:text-white"
-                type="file"
-                accept="application/pdf,.pdf"
-                onChange={(event) => setFile(event.target.files?.[0] || null)}
-              />
-            </label>
-            <Button type="submit" disabled={uploading}>{uploading ? 'Uploading...' : 'Upload and process'}</Button>
-          </form>
-        </Card>
-
-        <div className="space-y-6">
-          <Card className="overflow-hidden">
-            <div className="border-b border-brd px-5 py-4">
-              <h2 className="text-base font-black text-txtP">Processing queue</h2>
-            </div>
-            {documents.length === 0 ? (
-              <div className="p-5"><EmptyState title="No uploads yet" description="Uploaded PDFs will appear here with their processing status." /></div>
-            ) : (
-              <div className="divide-y divide-brd">
-                {documents.map((doc) => (
-                  <button
-                    key={doc.documentId}
-                    className="block w-full px-5 py-4 text-left transition-colors duration-200 hover:bg-mint/25"
-                    onClick={() => setSearchParams({ document: doc.documentId })}
-                  >
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                      <div className="min-w-0">
-                        <div className="truncate text-sm font-semibold text-txtP">{doc.fileName}</div>
-                        <div className="mt-1 text-xs text-txtS">{documentTypeLabel(doc.documentType)} · Uploaded {formatDateTime(doc.uploadedAt)}</div>
-                      </div>
-                      <StatusBadge status={doc.processingStatus} />
-                    </div>
-                  </button>
-                ))}
+      {/* Document cards grid */}
+      {documents.length === 0 ? (
+        <EmptyState title="No documents yet" description="Click the + Upload button above to upload your first medical document." />
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 mb-6">
+          {documents.map((doc) => (
+            <button
+              key={doc.documentId}
+              onClick={() => setSearchParams({ document: doc.documentId })}
+              className={`block w-full text-left rounded-crd border bg-white p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-glow focus:outline-none focus:ring-4 focus:ring-pri/10 ${
+                selectedDocumentId === doc.documentId ? 'border-pri shadow-glow' : 'border-brd shadow-crd'
+              }`}
+            >
+              <div className="flex items-start justify-between gap-2 mb-2">
+                <h3 className="truncate text-sm font-bold text-txtP">{doc.fileName}</h3>
+                <StatusBadge status={doc.processingStatus} />
               </div>
-            )}
-          </Card>
-
-          {selectedDocument ? <DocumentDetail document={selectedDocument} /> : null}
+              <p className="text-xs text-txtS">{documentTypeLabel(doc.documentType)}</p>
+              <p className="mt-1 text-xs text-txtS">{formatDateTime(doc.uploadedAt)}</p>
+            </button>
+          ))}
         </div>
-      </div>
+      )}
+
+      {/* Selected document detail */}
+      {selectedDocument ? <DocumentDetail document={selectedDocument} /> : null}
+
+      {/* Upload Modal */}
+      {showUploadModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fdIn" onClick={() => !uploading && setShowUploadModal(false)}>
+          <div className="relative mx-4 w-full max-w-md rounded-crd border border-brd bg-white p-6 shadow-glow" onClick={(e) => e.stopPropagation()}>
+            <button
+              onClick={() => !uploading && setShowUploadModal(false)}
+              className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full text-txtS transition-colors hover:bg-brd/50 hover:text-txtP"
+            >
+              <X size={18} />
+            </button>
+            <h3 className="text-lg font-black text-txtP">Upload document</h3>
+            <p className="mt-1 text-sm text-txtS">PDF only, max 15 MB. Blood & lab reports trigger AI analysis.</p>
+            <form className="mt-5 space-y-4" onSubmit={async (e) => { await handleUpload(e); if (!error) setShowUploadModal(false) }}>
+              <SelectField label="Document type" value={documentType} onChange={(event) => setDocumentType(event.target.value as DocumentType)}>
+                {documentTypes.map((type) => <option key={type} value={type}>{documentTypeLabel(type)}</option>)}
+              </SelectField>
+              <label className="block">
+                <span className="mb-1.5 block text-sm font-medium text-txtP">PDF file</span>
+                <input
+                  className="block w-full rounded-2xl border border-brd bg-white/85 px-3 py-2 text-sm text-txtP file:mr-4 file:rounded-btn file:border-0 file:bg-gradient-to-r file:from-pri file:to-pri2 file:px-3 file:py-1.5 file:text-sm file:font-bold file:text-white"
+                  type="file"
+                  accept="application/pdf,.pdf"
+                  onChange={(event) => setFile(event.target.files?.[0] || null)}
+                />
+              </label>
+              <Button className="w-full" type="submit" disabled={uploading}>{uploading ? 'Uploading...' : 'Upload and process'}</Button>
+            </form>
+          </div>
+        </div>
+      )}
     </>
   )
 }
