@@ -1,11 +1,13 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router'
 import { useProfile } from '../context/ProfileContext'
 import { listDocuments } from '../api/documents'
 import { Card, EmptyState, LoadingState, PageHeader, StatusBadge } from '../components/ui'
 import type { DocumentSummaryResponse, DocumentType } from '../types/api'
 import { documentTypeLabel, formatDateTime } from '../utils/format'
-import { FolderArchive, Upload, FileText, Receipt, Shield, CreditCard, FlaskConical } from 'lucide-react'
+import { FolderArchive, Upload, FileText, Receipt, Shield, CreditCard, FlaskConical, Loader2 } from 'lucide-react'
+
+const PAGE_SIZE = 20
 
 const categories: { key: DocumentType | 'ALL'; label: string; icon: React.ComponentType<{className?: string}> }[] = [
   { key: 'ALL', label: 'All', icon: FolderArchive },
@@ -23,15 +25,30 @@ export default function DocumentVaultPage() {
   const { activeProfile } = useProfile()
   const [documents, setDocuments] = useState<DocumentSummaryResponse[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [hasMore, setHasMore] = useState(false)
+  const [page, setPage] = useState(0)
   const [activeCategory, setActiveCategory] = useState<DocumentType | 'ALL'>('ALL')
 
-  useEffect(() => {
+  const loadPage = useCallback(async (pageNum: number, append: boolean) => {
     if (!activeProfile) return
-    setLoading(true)
-    listDocuments(activeProfile.memberId)
-      .then(setDocuments)
-      .finally(() => setLoading(false))
+    append ? setLoadingMore(true) : setLoading(true)
+    try {
+      const result = await listDocuments(activeProfile.memberId, pageNum, PAGE_SIZE)
+      setDocuments(prev => append ? [...prev, ...result.data] : result.data)
+      setHasMore(result.hasMore)
+      setPage(pageNum)
+    } finally {
+      setLoading(false)
+      setLoadingMore(false)
+    }
   }, [activeProfile])
+
+  useEffect(() => {
+    setDocuments([])
+    setPage(0)
+    void loadPage(0, false)
+  }, [activeProfile, loadPage])
 
   const filtered = useMemo(
     () => activeCategory === 'ALL' ? documents : documents.filter((d) => d.documentType === activeCategory),
@@ -94,6 +111,22 @@ export default function DocumentVaultPage() {
               </Card>
             </Link>
           ))}
+        </div>
+      )}
+
+      {hasMore && (
+        <div className="mt-6 flex justify-center">
+          <button
+            onClick={() => void loadPage(page + 1, true)}
+            disabled={loadingMore}
+            className="inline-flex items-center gap-2 rounded-btn border border-brd bg-white px-6 py-2.5 text-sm font-medium text-txtP shadow-sm transition-all hover:border-pri/40 hover:shadow-md disabled:opacity-60"
+          >
+            {loadingMore ? (
+              <><Loader2 size={16} className="animate-spin" />Loading...</>
+            ) : (
+              'Load More'
+            )}
+          </button>
         </div>
       )}
     </>

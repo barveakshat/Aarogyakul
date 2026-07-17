@@ -130,3 +130,11 @@ export interface TimelineEventResponse {
   relatedDocumentId?: UUID
   isManual: boolean
 }
+
+export interface PaginatedResponse<T> {
+  data: T[]
+  page: number
+  totalPages: number
+  totalElements: number
+  hasMore: boolean
+}

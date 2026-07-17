@@ -1,5 +1,6 @@
 package com.aarogyakul.controller;
 
+import com.aarogyakul.dto.Dtos;
 import com.aarogyakul.dto.Dtos.TimelineEventRequest;
 import com.aarogyakul.dto.Dtos.TimelineEventResponse;
 import com.aarogyakul.security.CurrentUser;
@@ -7,7 +8,6 @@ import com.aarogyakul.service.TimelineService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
-import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -22,8 +22,10 @@ public class TimelineController {
     }
 
     @GetMapping
-    public List<TimelineEventResponse> list(@PathVariable UUID memberId) {
-        return timelineService.list(memberId, currentUser.id());
+    public Dtos.PaginatedResponse<TimelineEventResponse> list(@PathVariable UUID memberId,
+                                                              @RequestParam(defaultValue = "0") int page,
+                                                              @RequestParam(defaultValue = "20") int size) {
+        return timelineService.listPaged(memberId, currentUser.id(), page, Math.min(size, 50));
     }
 
     @PostMapping

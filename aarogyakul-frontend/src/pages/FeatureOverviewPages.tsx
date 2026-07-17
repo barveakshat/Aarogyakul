@@ -16,7 +16,7 @@ export function InsightsPage() {
     if (!activeProfile) return
     setLoading(true)
     listDocuments(activeProfile.memberId)
-      .then(setDocuments)
+      .then(result => setDocuments(result.data))
       .finally(() => setLoading(false))
   }, [activeProfile])
 

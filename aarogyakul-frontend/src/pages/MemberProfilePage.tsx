@@ -33,9 +33,9 @@ export default function MemberProfilePage() {
     setLoading(true)
     setError('')
     try {
-      const [nextMember, nextDocuments] = await Promise.all([getMember(memberId), listDocuments(memberId)])
+      const [nextMember, nextDocsResult] = await Promise.all([getMember(memberId), listDocuments(memberId)])
       setMember(nextMember)
-      setDocuments(nextDocuments)
+      setDocuments(nextDocsResult.data)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not load member')
     } finally {

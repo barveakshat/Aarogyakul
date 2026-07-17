@@ -1,10 +1,12 @@
-import { FormEvent, useEffect, useState } from 'react'
+import { FormEvent, useCallback, useEffect, useState } from 'react'
 import { useProfile } from '../context/ProfileContext'
 import { createTimelineEvent, deleteTimelineEvent, listTimeline } from '../api/documents'
 import { Alert, Button, Card, EmptyState, LoadingState, PageHeader, SelectField, TextAreaField, TextField } from '../components/ui'
 import type { TimelineEventResponse, TimelineEventType } from '../types/api'
 import { formatDate, timelineEventLabel } from '../utils/format'
-import { Plus, Trash2, Stethoscope, FlaskConical, Syringe, Pill, FileText, Scissors, StickyNote, X } from 'lucide-react'
+import { Plus, Trash2, Stethoscope, FlaskConical, Syringe, Pill, FileText, Scissors, StickyNote, X, Loader2 } from 'lucide-react'
+
+const PAGE_SIZE = 20
 
 const eventTypeIcons: Record<TimelineEventType, React.ComponentType<{className?: string; size?: number}>> = {
   DOCUMENT_UPLOAD: FileText,
@@ -32,22 +34,34 @@ export default function TimelinePage() {
   const memberId = activeProfile?.memberId || ''
   const [events, setEvents] = useState<TimelineEventResponse[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [hasMore, setHasMore] = useState(false)
+  const [page, setPage] = useState(0)
   const [error, setError] = useState('')
   const [showAddModal, setShowAddModal] = useState(false)
 
-  const load = async () => {
+  const loadPage = useCallback(async (pageNum: number, append: boolean) => {
     if (!memberId) return
     setError('')
+    append ? setLoadingMore(true) : setLoading(true)
     try {
-      setEvents(await listTimeline(memberId))
+      const result = await listTimeline(memberId, pageNum, PAGE_SIZE)
+      setEvents(prev => append ? [...prev, ...result.data] : result.data)
+      setHasMore(result.hasMore)
+      setPage(pageNum)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not load timeline')
     } finally {
       setLoading(false)
+      setLoadingMore(false)
     }
-  }
+  }, [memberId])
 
-  useEffect(() => { void load() }, [memberId])
+  useEffect(() => {
+    setEvents([])
+    setPage(0)
+    void loadPage(0, false)
+  }, [memberId, loadPage])
 
   const handleDelete = async (eventId: string) => {
     if (!window.confirm('Delete this timeline entry?')) return
@@ -112,11 +126,27 @@ export default function TimelinePage() {
         </Card>
       )}
 
+      {hasMore && (
+        <div className="mt-6 flex justify-center">
+          <button
+            onClick={() => void loadPage(page + 1, true)}
+            disabled={loadingMore}
+            className="inline-flex items-center gap-2 rounded-btn border border-brd bg-white px-6 py-2.5 text-sm font-medium text-txtP shadow-sm transition-all hover:border-pri/40 hover:shadow-md disabled:opacity-60"
+          >
+            {loadingMore ? (
+              <><Loader2 size={16} className="animate-spin" />Loading...</>
+            ) : (
+              'Load More'
+            )}
+          </button>
+        </div>
+      )}
+
       {showAddModal && (
         <AddEventModal
           memberId={memberId}
           onClose={() => setShowAddModal(false)}
-          onCreated={() => { setShowAddModal(false); void load() }}
+          onCreated={() => { setShowAddModal(false); void loadPage(0, false) }}
         />
       )}
     </>

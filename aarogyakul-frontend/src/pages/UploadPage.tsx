@@ -37,8 +37,8 @@ export default function UploadPage() {
   const load = useCallback(async () => {
     setError('')
     try {
-      const nextDocuments = await listDocuments(memberId)
-      setDocuments(nextDocuments)
+      const result = await listDocuments(memberId)
+      setDocuments(result.data)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not load upload workspace')
     } finally {

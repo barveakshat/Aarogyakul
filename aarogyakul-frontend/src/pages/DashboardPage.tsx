@@ -30,9 +30,9 @@ export default function DashboardPage() {
     Promise.all([
       listDocuments(activeProfile.memberId),
       listTimeline(activeProfile.memberId),
-    ]).then(([docs, events]) => {
-      setDocuments(docs)
-      setTimeline(events)
+    ]).then(([docsResult, eventsResult]) => {
+      setDocuments(docsResult.data)
+      setTimeline(eventsResult.data)
     }).finally(() => setLoading(false))
   }, [activeProfile])
 

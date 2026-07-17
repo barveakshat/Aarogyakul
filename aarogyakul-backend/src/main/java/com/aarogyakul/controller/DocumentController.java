@@ -1,5 +1,6 @@
 package com.aarogyakul.controller;
 
+import com.aarogyakul.dto.Dtos;
 import com.aarogyakul.dto.Dtos.*;
 import com.aarogyakul.security.CurrentUser;
 import com.aarogyakul.service.DocumentService;
@@ -7,7 +8,6 @@ import com.aarogyakul.util.Enums.DocumentType;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -33,8 +33,10 @@ public class DocumentController {
     }
 
     @GetMapping("/api/members/{memberId}/documents")
-    public List<DocumentSummaryResponse> list(@PathVariable UUID memberId) {
-        return documentService.listForMember(memberId, currentUser.id());
+    public Dtos.PaginatedResponse<DocumentSummaryResponse> list(@PathVariable UUID memberId,
+                                                                @RequestParam(defaultValue = "0") int page,
+                                                                @RequestParam(defaultValue = "20") int size) {
+        return documentService.listForMemberPaged(memberId, currentUser.id(), page, Math.min(size, 50));
     }
 
     @DeleteMapping("/api/documents/{documentId}")

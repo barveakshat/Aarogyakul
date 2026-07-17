@@ -1,5 +1,6 @@
 package com.aarogyakul.service;
 
+import com.aarogyakul.dto.Dtos.PaginatedResponse;
 import com.aarogyakul.dto.Dtos.TimelineEventRequest;
 import com.aarogyakul.dto.Dtos.TimelineEventResponse;
 import com.aarogyakul.entity.TimelineEvent;
@@ -26,6 +27,17 @@ public class TimelineService {
         return events.findByFamilyMemberIdOrderByEventDateDescCreatedAtDesc(memberId).stream()
                 .map(this::toResponse)
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public PaginatedResponse<TimelineEventResponse> listPaged(UUID memberId, UUID userId, int page, int size) {
+        memberService.requireOwnedMember(memberId, userId);
+        var pageResult = events.findByFamilyMemberId(memberId,
+                org.springframework.data.domain.PageRequest.of(page, size,
+                        org.springframework.data.domain.Sort.by("eventDate").descending().and(
+                                org.springframework.data.domain.Sort.by("createdAt").descending())));
+        var data = pageResult.getContent().stream().map(this::toResponse).toList();
+        return new PaginatedResponse<>(data, pageResult.getNumber(), pageResult.getTotalPages(), pageResult.getTotalElements(), pageResult.hasNext());
     }
 
     @Transactional

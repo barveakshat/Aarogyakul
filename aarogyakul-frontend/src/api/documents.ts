@@ -4,6 +4,7 @@ import type {
   DocumentSummaryResponse,
   DocumentType,
   DocumentUploadResponse,
+  PaginatedResponse,
   TimelineEventRequest,
   TimelineEventResponse,
   UUID,
@@ -20,8 +21,10 @@ export async function uploadDocument(memberId: UUID, file: File, documentType: D
   return data
 }
 
-export async function listDocuments(memberId: UUID) {
-  const { data } = await api.get<DocumentSummaryResponse[]>(`/api/members/${memberId}/documents`)
+export async function listDocuments(memberId: UUID, page = 0, size = 20) {
+  const { data } = await api.get<PaginatedResponse<DocumentSummaryResponse>>(`/api/members/${memberId}/documents`, {
+    params: { page, size },
+  })
   return data
 }
 
@@ -34,8 +37,10 @@ export async function deleteDocument(documentId: UUID) {
   await api.delete(`/api/documents/${documentId}`)
 }
 
-export async function listTimeline(memberId: UUID) {
-  const { data } = await api.get<TimelineEventResponse[]>(`/api/members/${memberId}/timeline`)
+export async function listTimeline(memberId: UUID, page = 0, size = 20) {
+  const { data } = await api.get<PaginatedResponse<TimelineEventResponse>>(`/api/members/${memberId}/timeline`, {
+    params: { page, size },
+  })
   return data
 }
 

@@ -12,6 +12,9 @@ import java.util.UUID;
 public final class Dtos {
     private Dtos() {}
 
+    /** Generic paginated response envelope for list endpoints. */
+    public record PaginatedResponse<T>(List<T> data, int page, int totalPages, long totalElements, boolean hasMore) {}
+
     public record RegisterRequest(@Email @NotBlank String email, @Size(min = 8) String password,
                                   @NotBlank String fullName, String phoneNumber) {}
     public record LoginRequest(@Email @NotBlank String email, @NotBlank String password) {}

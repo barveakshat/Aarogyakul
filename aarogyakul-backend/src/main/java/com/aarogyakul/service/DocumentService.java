@@ -95,6 +95,15 @@ public class DocumentService {
         return documents.findByFamilyMemberIdOrderByUploadedAtDesc(memberId).stream().map(mapper::documentSummary).toList();
     }
 
+    @Transactional(readOnly = true)
+    public PaginatedResponse<DocumentSummaryResponse> listForMemberPaged(UUID memberId, UUID userId, int page, int size) {
+        memberService.requireOwnedMember(memberId, userId);
+        var pageResult = documents.findByFamilyMemberId(memberId,
+                org.springframework.data.domain.PageRequest.of(page, size, org.springframework.data.domain.Sort.by("uploadedAt").descending()));
+        var data = pageResult.getContent().stream().map(mapper::documentSummary).toList();
+        return new PaginatedResponse<>(data, pageResult.getNumber(), pageResult.getTotalPages(), pageResult.getTotalElements(), pageResult.hasNext());
+    }
+
     @Transactional
     public void delete(UUID documentId, UUID userId) {
         MedicalDocument document = requireOwnedDocument(documentId, userId);
