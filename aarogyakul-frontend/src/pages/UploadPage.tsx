@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useState } from 'react'
+import { FormEvent, useEffect, useState, useCallback } from 'react'
 import { useSearchParams } from 'react-router'
 import { getDocument, listDocuments, uploadDocument } from '../api/documents'
 import { Alert, Button, Card, EmptyState, LoadingState, PageHeader, SelectField, StatusBadge } from '../components/ui'
@@ -9,6 +9,14 @@ import { useProfile } from '../context/ProfileContext'
 
 const maxPdfSize = 15 * 1024 * 1024
 const documentTypes: DocumentType[] = ['BLOOD_REPORT', 'LAB_REPORT', 'PRESCRIPTION', 'DISCHARGE_SUMMARY', 'BILL', 'INSURANCE_DOC', 'MEDICAL_ID', 'OTHER']
+
+const PIPELINE_STAGES = [
+  { key: 'EXTRACTING_TEXT', label: 'Reading PDF' },
+  { key: 'IDENTIFYING_PARAMETERS', label: 'Extracting lab values' },
+  { key: 'COMPARING_HISTORY', label: 'Comparing history' },
+  { key: 'GENERATING_SUMMARY', label: 'Generating summary' },
+  { key: 'COMPLETED', label: 'Complete' },
+]
 
 export default function UploadPage() {
   const { activeProfile } = useProfile()
@@ -22,10 +30,11 @@ export default function UploadPage() {
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState('')
   const [showUploadModal, setShowUploadModal] = useState(false)
+  const [processingStage, setProcessingStage] = useState<{ stage: string; message: string } | null>(null)
 
   const selectedDocumentId = searchParams.get('document')
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setError('')
     try {
       const nextDocuments = await listDocuments(memberId)
@@ -35,11 +44,11 @@ export default function UploadPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [memberId])
 
   useEffect(() => {
     void load()
-  }, [memberId])
+  }, [load])
 
   useEffect(() => {
     if (!selectedDocumentId) {
@@ -49,12 +58,50 @@ export default function UploadPage() {
     void getDocument(selectedDocumentId).then(setSelectedDocument).catch((err) => setError(err instanceof Error ? err.message : 'Could not load document'))
   }, [selectedDocumentId])
 
+  // SSE for real-time processing updates, fallback to polling
   useEffect(() => {
-    const hasActive = documents.some((doc) => doc.processingStatus === 'PENDING' || doc.processingStatus === 'PROCESSING')
-    if (!hasActive) return
-    const timer = window.setInterval(() => void load(), 5000)
-    return () => window.clearInterval(timer)
-  }, [documents])
+    const activeDoc = documents.find((doc) => doc.processingStatus === 'PENDING' || doc.processingStatus === 'PROCESSING')
+    if (!activeDoc) {
+      setProcessingStage(null)
+      return
+    }
+
+    const apiBase = import.meta.env.VITE_API_BASE_URL || ''
+    const sseUrl = `${apiBase}/api/documents/${activeDoc.documentId}/status-stream`
+
+    let eventSource: EventSource | null = null
+    let fallbackTimer: number | null = null
+
+    try {
+      eventSource = new EventSource(sseUrl, { withCredentials: true })
+
+      eventSource.addEventListener('stage', (event) => {
+        const data = JSON.parse(event.data)
+        setProcessingStage(data)
+        if (data.stage === 'COMPLETED' || data.stage === 'FAILED') {
+          void load()
+          if (selectedDocumentId === activeDoc.documentId) {
+            void getDocument(activeDoc.documentId).then(setSelectedDocument)
+          }
+        }
+      })
+
+      eventSource.onerror = () => {
+        // SSE failed — fallback to polling
+        eventSource?.close()
+        eventSource = null
+        fallbackTimer = window.setInterval(() => void load(), 5000)
+      }
+    } catch {
+      // EventSource not supported — fallback to polling
+      fallbackTimer = window.setInterval(() => void load(), 5000)
+    }
+
+    return () => {
+      eventSource?.close()
+      if (fallbackTimer) window.clearInterval(fallbackTimer)
+    }
+  }, [documents, load, selectedDocumentId])
 
   const handleUpload = async (event: FormEvent) => {
     event.preventDefault()
@@ -102,6 +149,34 @@ export default function UploadPage() {
         }
       />
       {error ? <div className="mb-4"><Alert message={error} /></div> : null}
+
+      {/* ─── PROCESSING STEPPER ─── */}
+      {processingStage && processingStage.stage !== 'COMPLETED' && processingStage.stage !== 'FAILED' && (
+        <div className="mb-6 rounded-crd border border-pri/20 bg-pri/5 p-5">
+          <h4 className="text-sm font-bold text-txtP mb-4 flex items-center gap-2">
+            <Sparkles size={14} className="text-pri animate-pulse" />
+            AI is analyzing your report...
+          </h4>
+          <div className="flex items-center gap-1">
+            {PIPELINE_STAGES.map((stage, i) => {
+              const currentIndex = PIPELINE_STAGES.findIndex(s => s.key === processingStage.stage)
+              const isDone = i < currentIndex
+              const isCurrent = i === currentIndex
+              return (
+                <div key={stage.key} className="flex-1 flex flex-col items-center gap-1.5">
+                  <div className={`h-1.5 w-full rounded-full transition-all duration-500 ${
+                    isDone ? 'bg-norm' : isCurrent ? 'bg-pri animate-pulse' : 'bg-brd/40'
+                  }`} />
+                  <span className={`text-[10px] font-medium text-center leading-tight ${
+                    isCurrent ? 'text-pri font-bold' : isDone ? 'text-norm' : 'text-txtS'
+                  }`}>{stage.label}</span>
+                </div>
+              )
+            })}
+          </div>
+          <p className="mt-3 text-xs text-txtS">{processingStage.message}</p>
+        </div>
+      )}
 
       {/* Document cards grid */}
       {documents.length === 0 ? (
@@ -273,8 +348,12 @@ function DocumentDetail({ document }: { document: DocumentResponse }) {
               <span className="text-txtS">{showRawSummary ? '▲' : '▼'}</span>
             </button>
             {showRawSummary && (
-              <div className="mt-3 rounded-xl border border-brd bg-slate-50/70 p-4">
-                <p className="text-sm leading-7 text-txtS whitespace-pre-line">{summaryText}</p>
+              <div className="mt-4 rounded-crd border-2 border-warn/30 bg-warn/5 p-5">
+                <div className="flex items-start gap-3 mb-3">
+                  <span className="text-xl">🤖</span>
+                  <h4 className="font-bold text-txtP">AI-Generated Summary</h4>
+                </div>
+                <p className="text-sm text-txtS whitespace-pre-line leading-relaxed">{summaryText}</p>
               </div>
             )}
           </div>
@@ -291,11 +370,12 @@ function DocumentDetail({ document }: { document: DocumentResponse }) {
                   <th className="px-4 py-2.5 text-xs font-bold uppercase tracking-wide text-txtS">Value</th>
                   <th className="px-4 py-2.5 text-xs font-bold uppercase tracking-wide text-txtS">Ref. Range</th>
                   <th className="px-4 py-2.5 text-xs font-bold uppercase tracking-wide text-txtS">Status</th>
+                  <th className="px-4 py-2.5 text-xs font-bold uppercase tracking-wide text-txtS">Confidence</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-brd/60">
                 {categorized.length === 0 ? (
-                  <tr><td className="px-4 py-4 text-txtS" colSpan={4}>No extracted parameters available yet.</td></tr>
+                  <tr><td className="px-4 py-4 text-txtS" colSpan={5}>No extracted parameters available yet.</td></tr>
                 ) : (
                   categorized.map((p) => (
                     <tr key={`${p.parameterName}-${p.unit}`} className={p.status === 'high' || p.status === 'low' ? 'bg-crit/[0.02]' : ''}>
@@ -313,6 +393,22 @@ function DocumentDetail({ document }: { document: DocumentResponse }) {
                         {p.status === 'high' && <span className="inline-flex items-center gap-1 rounded-full bg-crit/10 px-2 py-0.5 text-[10px] font-bold text-crit">↑ High</span>}
                         {p.status === 'low' && <span className="inline-flex items-center gap-1 rounded-full bg-warn/10 px-2 py-0.5 text-[10px] font-bold text-warn">↓ Low</span>}
                         {p.status === 'unknown' && <span className="inline-flex rounded-full bg-brd/50 px-2 py-0.5 text-[10px] font-bold text-txtS">—</span>}
+                      </td>
+                      <td className="px-4 py-2.5">
+                        {p.confidence ? (
+                          <span
+                            className="inline-flex items-center gap-1.5"
+                            title={`AI extraction confidence: ${p.confidence}. HIGH = very reliable, MEDIUM = review recommended, LOW = manual verification needed.`}
+                          >
+                            <span className={`inline-block h-2.5 w-2.5 rounded-full ${
+                              p.confidence === 'HIGH' ? 'bg-norm' :
+                              p.confidence === 'MEDIUM' ? 'bg-warn' : 'bg-crit'
+                            }`} />
+                            <span className="text-[10px] font-bold text-txtS">{p.confidence}</span>
+                          </span>
+                        ) : (
+                          <span className="text-[10px] text-txtS">—</span>
+                        )}
                       </td>
                     </tr>
                   ))
