@@ -2,12 +2,15 @@ package com.aarogyakul.entity;
 
 import com.aarogyakul.util.Enums.TimelineEventType;
 import jakarta.persistence.*;
+import org.hibernate.annotations.SQLRestriction;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
 @Entity
 @Table(name = "timeline_events")
+@SQLRestriction("deleted_at IS NULL")
 public class TimelineEvent {
     @Id @GeneratedValue(strategy = GenerationType.UUID)
     public UUID id;
@@ -28,6 +31,8 @@ public class TimelineEvent {
     public MedicalDocument relatedDocument;
     @Column(name = "created_at", nullable = false)
     public OffsetDateTime createdAt;
+    @Column(name = "deleted_at")
+    public Instant deletedAt;
 
     @PrePersist
     void prePersist() {

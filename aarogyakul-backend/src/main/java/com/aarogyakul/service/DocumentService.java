@@ -101,8 +101,8 @@ public class DocumentService {
         timelineEvents.deleteByRelatedDocumentId(document.id);
         insights.deleteByDocumentId(document.id);
         parameters.deleteByDocumentId(document.id);
-        storage.delete(document.fileUrl);
-        documents.delete(document);
+        document.deletedAt = java.time.Instant.now();
+        documents.save(document);
     }
 
     public MedicalDocument requireOwnedDocument(UUID documentId, UUID userId) {

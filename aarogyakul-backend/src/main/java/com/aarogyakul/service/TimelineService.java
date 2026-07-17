@@ -52,7 +52,8 @@ public class TimelineService {
         if (event.relatedDocument != null) {
             throw ApiException.validation("Cannot delete auto-generated timeline events");
         }
-        events.delete(event);
+        event.deletedAt = java.time.Instant.now();
+        events.save(event);
     }
 
     private TimelineEventResponse toResponse(TimelineEvent event) {

@@ -92,7 +92,8 @@ public class MemberService {
     @Transactional
     public void delete(UUID memberId, UUID userId) {
         FamilyMember member = requireOwnedMember(memberId, userId);
-        members.delete(member);
+        member.deletedAt = java.time.Instant.now();
+        members.save(member);
     }
 
     @Transactional

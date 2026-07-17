@@ -3,6 +3,7 @@ package com.aarogyakul.entity;
 import com.aarogyakul.util.Enums.DocumentType;
 import com.aarogyakul.util.Enums.ProcessingStatus;
 import jakarta.persistence.*;
+import org.hibernate.annotations.SQLRestriction;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
@@ -10,6 +11,7 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "medical_documents")
+@SQLRestriction("deleted_at IS NULL")
 public class MedicalDocument {
     @Id @GeneratedValue(strategy = GenerationType.UUID)
     public UUID id;
@@ -40,6 +42,8 @@ public class MedicalDocument {
     public Instant updatedAt;
     @Column(name = "retry_count", nullable = false)
     public int retryCount = 0;
+    @Column(name = "deleted_at")
+    public Instant deletedAt;
 
     @PrePersist
     void prePersist() {

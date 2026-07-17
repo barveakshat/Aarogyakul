@@ -1,12 +1,15 @@
 package com.aarogyakul.entity;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.SQLRestriction;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
 @Entity
 @Table(name = "family_members")
+@SQLRestriction("deleted_at IS NULL")
 public class FamilyMember {
     @Id @GeneratedValue(strategy = GenerationType.UUID)
     public UUID id;
@@ -28,6 +31,8 @@ public class FamilyMember {
     public OffsetDateTime createdAt;
     @Column(name = "updated_at", nullable = false)
     public OffsetDateTime updatedAt;
+    @Column(name = "deleted_at")
+    public Instant deletedAt;
 
     @PrePersist
     void prePersist() {
