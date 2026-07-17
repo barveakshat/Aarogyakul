@@ -1,4 +1,5 @@
 import { Routes, Route, Navigate } from 'react-router'
+import { ErrorBoundary } from './components/ErrorBoundary'
 import { useAuth } from './hooks/useAuth'
 import { useProfile } from './context/ProfileContext'
 import { AppLayout } from './components/AppLayout'
@@ -31,29 +32,31 @@ function ProfileGuard({ children }: { children: React.ReactNode }) {
 function App() {
   return (
     <div className="min-h-screen bg-bg">
-      <Routes>
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
-        <Route path="/app/profiles" element={<PrivateRoute><ProfilePickerPage /></PrivateRoute>} />
-        <Route
-          element={
-            <PrivateRoute>
-              <ProfileGuard>
-                <AppLayout />
-              </ProfileGuard>
-            </PrivateRoute>
-          }
-        >
-          <Route path="/app" element={<DashboardPage />} />
-          <Route path="/app/vault" element={<DocumentVaultPage />} />
-          <Route path="/app/insights" element={<UploadPage />} />
-          <Route path="/app/timeline" element={<TimelinePage />} />
-          <Route path="/app/clinical" element={<ClinicalPage />} />
-          <Route path="/app/profile" element={<MemberProfilePage />} />
-        </Route>
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+      <ErrorBoundary>
+        <Routes>
+          <Route path="/" element={<ErrorBoundary><LandingPage /></ErrorBoundary>} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+          <Route path="/app/profiles" element={<PrivateRoute><ProfilePickerPage /></PrivateRoute>} />
+          <Route
+            element={
+              <PrivateRoute>
+                <ProfileGuard>
+                  <ErrorBoundary><AppLayout /></ErrorBoundary>
+                </ProfileGuard>
+              </PrivateRoute>
+            }
+          >
+            <Route path="/app" element={<ErrorBoundary><DashboardPage /></ErrorBoundary>} />
+            <Route path="/app/vault" element={<ErrorBoundary><DocumentVaultPage /></ErrorBoundary>} />
+            <Route path="/app/insights" element={<ErrorBoundary><UploadPage /></ErrorBoundary>} />
+            <Route path="/app/timeline" element={<ErrorBoundary><TimelinePage /></ErrorBoundary>} />
+            <Route path="/app/clinical" element={<ErrorBoundary><ClinicalPage /></ErrorBoundary>} />
+            <Route path="/app/profile" element={<ErrorBoundary><MemberProfilePage /></ErrorBoundary>} />
+          </Route>
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </ErrorBoundary>
     </div>
   )
 }
