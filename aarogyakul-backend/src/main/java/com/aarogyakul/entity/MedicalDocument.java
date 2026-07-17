@@ -3,6 +3,7 @@ package com.aarogyakul.entity;
 import com.aarogyakul.util.Enums.DocumentType;
 import com.aarogyakul.util.Enums.ProcessingStatus;
 import jakarta.persistence.*;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.UUID;
@@ -35,9 +36,19 @@ public class MedicalDocument {
     public String processingError;
     @Column(name = "uploaded_at", nullable = false)
     public OffsetDateTime uploadedAt;
+    @Column(name = "updated_at", nullable = false)
+    public Instant updatedAt;
+    @Column(name = "retry_count", nullable = false)
+    public int retryCount = 0;
 
     @PrePersist
     void prePersist() {
         uploadedAt = uploadedAt == null ? OffsetDateTime.now() : uploadedAt;
+        updatedAt = Instant.now();
+    }
+
+    @PreUpdate
+    void preUpdate() {
+        updatedAt = Instant.now();
     }
 }

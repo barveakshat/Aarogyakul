@@ -45,7 +45,7 @@ public class Mapper {
     }
 
     public ParameterResponse parameter(MedicalParameter p) {
-        return new ParameterResponse(p.parameterName, p.value, p.unit, p.referenceRangeLow, p.referenceRangeHigh);
+        return new ParameterResponse(p.parameterName, p.value, p.unit, p.referenceRangeLow, p.referenceRangeHigh, p.confidence);
     }
 
     public DocumentSummaryResponse documentSummary(MedicalDocument d) {

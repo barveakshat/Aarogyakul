@@ -7,4 +7,5 @@ public final class Enums {
     public enum ProcessingStatus { PENDING, PROCESSING, COMPLETED, FAILED }
     public enum TimelineEventType { DOCUMENT_UPLOAD, DIAGNOSIS, VACCINATION, DOCTOR_VISIT, SURGERY, LAB_TEST, MEDICATION_CHANGE, NOTE }
     public enum TrendDirection { IMPROVING, WORSENING, STABLE, UNKNOWN }
+    public enum ConfidenceLevel { HIGH, MEDIUM, LOW }
 }

@@ -28,6 +28,8 @@ public class MedicalParameter {
     public BigDecimal referenceRangeHigh;
     @Column(name = "report_date", nullable = false)
     public LocalDate reportDate;
+    @Column(name = "confidence", nullable = false, length = 20)
+    public String confidence = "MEDIUM";
     @Column(name = "created_at", nullable = false)
     public OffsetDateTime createdAt;
 

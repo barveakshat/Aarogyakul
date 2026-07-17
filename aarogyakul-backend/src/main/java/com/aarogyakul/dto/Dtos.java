@@ -16,6 +16,7 @@ public final class Dtos {
                                   @NotBlank String fullName, String phoneNumber) {}
     public record LoginRequest(@Email @NotBlank String email, @NotBlank String password) {}
     public record AuthResponse(UUID userId, String email, String fullName, String accessToken) {}
+    public record AuthUserResponse(UUID userId, String email, String fullName) {}
 
     public record CreateFamilyRequest(@NotBlank String familyName) {}
     public record FamilyResponse(UUID familyId, String familyName, UUID ownerId, OffsetDateTime createdAt,
@@ -44,7 +45,8 @@ public final class Dtos {
                                    String processingError, List<ParameterResponse> parameters,
                                    InsightResponse insight, OffsetDateTime uploadedAt) {}
     public record ParameterResponse(String parameterName, BigDecimal value, String unit,
-                                    BigDecimal referenceRangeLow, BigDecimal referenceRangeHigh) {}
+                                    BigDecimal referenceRangeLow, BigDecimal referenceRangeHigh,
+                                    String confidence) {}
     public record InsightResponse(String summaryText, Map<String, Object> comparisonJson) {}
     public record TimelineEventResponse(UUID id, TimelineEventType eventType, LocalDate eventDate,
                                         String title, String description, UUID relatedDocumentId,
