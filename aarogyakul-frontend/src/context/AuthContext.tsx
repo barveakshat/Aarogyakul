@@ -4,16 +4,14 @@ import type { RegisterRequest, User } from '../types/api'
 
 interface AuthContextType {
   user: User | null
-  token: string | null
   loading: boolean
   login: (email: string, password: string) => Promise<void>
   register: (data: RegisterRequest) => Promise<void>
   logout: () => void
-  setSession: (token: string, user: User) => void
+  setSession: (user: User) => void
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
-const TOKEN_KEY = 'ak_token'
 const USER_KEY = 'ak_user'
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -21,7 +19,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const stored = localStorage.getItem(USER_KEY)
     return stored ? (JSON.parse(stored) as User) : null
   })
-  const [token, setToken] = useState<string | null>(() => localStorage.getItem(TOKEN_KEY))
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -30,7 +27,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (email: string, password: string) => {
     const data = await authApi.login({ email, password })
-    setSession(data.accessToken, {
+    setSession({
       id: data.userId, 
       email: data.email, 
       fullName: data.fullName 
@@ -39,30 +36,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const register = async (payload: RegisterRequest) => {
     const response = await authApi.register(payload)
-    setSession(response.accessToken, {
+    setSession({
       id: response.userId, 
       email: response.email, 
       fullName: response.fullName 
     })
   }
 
-  const setSession = (nextToken: string, nextUser: User) => {
-    localStorage.setItem(TOKEN_KEY, nextToken)
+  const setSession = (nextUser: User) => {
     localStorage.setItem(USER_KEY, JSON.stringify(nextUser))
-    setToken(nextToken)
     setUser(nextUser)
   }
 
-  const logout = () => {
-    localStorage.removeItem(TOKEN_KEY)
+  const logout = async () => {
+    try {
+      await authApi.logout()
+    } catch {
+      // Server may be unreachable — clear local state anyway
+    }
     localStorage.removeItem(USER_KEY)
-    setToken(null)
     setUser(null)
   }
 
   const value = useMemo(
-    () => ({ user, token, loading, login, register, logout, setSession }),
-    [user, token, loading],
+    () => ({ user, loading, login, register, logout, setSession }),
+    [user, loading],
   )
 
   return (

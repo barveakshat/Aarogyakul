@@ -32,7 +32,6 @@ export interface AuthResponse {
   userId: UUID
   email: string
   fullName: string
-  accessToken: string
 }
 
 export interface CreateFamilyRequest {
@@ -101,6 +100,7 @@ export interface ParameterResponse {
   unit?: string
   referenceRangeLow?: number
   referenceRangeHigh?: number
+  confidence?: string
 }
 
 export interface InsightResponse {
