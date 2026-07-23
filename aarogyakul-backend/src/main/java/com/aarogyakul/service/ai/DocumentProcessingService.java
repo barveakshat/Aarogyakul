@@ -6,6 +6,8 @@ import com.aarogyakul.repository.*;
 import com.aarogyakul.util.Enums.*;
 import com.aarogyakul.util.ParameterUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
@@ -37,13 +39,14 @@ public class DocumentProcessingService {
     private final LlamaClient llamaClient;
     private final ObjectMapper objectMapper;
     private final ApplicationEventPublisher eventPublisher;
+    private final MeterRegistry meterRegistry;
 
     public DocumentProcessingService(MedicalDocumentRepository documents, MedicalParameterRepository parameters,
                                      AiInsightRepository insights, TimelineEventRepository events, OcrService ocrService,
                                      ParameterExtractionService extractionService, ComparisonService comparisonService,
                                      InsightGenerationService insightGenerationService, DocumentStatusService statusService,
                                      LlamaClient llamaClient, ObjectMapper objectMapper,
-                                     ApplicationEventPublisher eventPublisher) {
+                                     ApplicationEventPublisher eventPublisher, MeterRegistry meterRegistry) {
         this.documents = documents;
         this.parameters = parameters;
         this.insights = insights;
@@ -56,10 +59,12 @@ public class DocumentProcessingService {
         this.llamaClient = llamaClient;
         this.objectMapper = objectMapper;
         this.eventPublisher = eventPublisher;
+        this.meterRegistry = meterRegistry;
     }
 
     @Async("aiTaskExecutor")
     public void process(UUID documentId, Path tempPdf) {
+        Timer.Sample timerSample = Timer.start(meterRegistry);
         try {
             log.info("Starting AI pipeline for document {}", documentId);
             statusService.markProcessing(documentId);
@@ -111,10 +116,15 @@ public class DocumentProcessingService {
             createTimelineEvent(document, saved);
             publishStage(documentId, ProcessingStageEvent.COMPLETED, "Your results are ready!");
             log.info("AI pipeline COMPLETED for document {} — {} parameters extracted", documentId, saved.size());
+            timerSample.stop(Timer.builder("aarogyakul.ai.pipeline.duration")
+                    .tag("status", "success").register(meterRegistry));
         } catch (Exception e) {
             log.error("AI pipeline FAILED for document {}: {}", documentId, e.getMessage(), e);
             statusService.markFailed(documentId, e.getMessage());
             publishStage(documentId, ProcessingStageEvent.FAILED, e.getMessage() != null ? e.getMessage() : "Processing failed");
+            meterRegistry.counter("aarogyakul.ai.pipeline.failures").increment();
+            timerSample.stop(Timer.builder("aarogyakul.ai.pipeline.duration")
+                    .tag("status", "failure").register(meterRegistry));
         } finally {
             try {
                 Files.deleteIfExists(tempPdf);

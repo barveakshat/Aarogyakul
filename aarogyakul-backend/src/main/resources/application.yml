@@ -47,3 +47,20 @@ llama:
 
 tesseract:
   datapath: ${TESSDATA_PREFIX:}
+
+llm:
+  connect-timeout-seconds: ${LLM_CONNECT_TIMEOUT:30}
+  read-timeout-seconds: ${LLM_READ_TIMEOUT:90}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: when-authorized
+
+logging:
+  pattern:
+    console: "%d{ISO8601} [%thread] [%X{traceId:-}] %-5level %logger{36} - %msg%n"
