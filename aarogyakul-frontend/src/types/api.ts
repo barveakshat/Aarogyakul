@@ -138,3 +138,20 @@ export interface PaginatedResponse<T> {
   totalElements: number
   hasMore: boolean
 }
+
+export interface ParameterDataPoint {
+  date: string
+  value: number
+  referenceRangeLow?: number
+  referenceRangeHigh?: number
+}
+
+export interface ParameterTrendResponse {
+  parameterName: string
+  unit: string
+  dataPoints: ParameterDataPoint[]
+}
+
+export interface TrackedParametersResponse {
+  parameterNames: string[]
+}

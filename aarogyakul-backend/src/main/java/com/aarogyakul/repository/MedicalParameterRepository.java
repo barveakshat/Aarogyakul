@@ -15,4 +15,12 @@ public interface MedicalParameterRepository extends JpaRepository<MedicalParamet
 
     Optional<MedicalParameter> findFirstByFamilyMemberIdAndParameterNameAndReportDateBeforeOrderByReportDateDescCreatedAtDesc(
             UUID memberId, String parameterName, LocalDate reportDate);
+
+    /** All readings of a specific parameter for a member, oldest first. */
+    List<MedicalParameter> findByFamilyMemberIdAndParameterNameOrderByReportDateAsc(
+            UUID memberId, String parameterName);
+
+    /** Distinct parameter names that have been tracked for a member. */
+    @Query("SELECT DISTINCT p.parameterName FROM MedicalParameter p WHERE p.familyMember.id = :memberId ORDER BY p.parameterName")
+    List<String> findDistinctParameterNamesByFamilyMemberId(@Param("memberId") UUID memberId);
 }

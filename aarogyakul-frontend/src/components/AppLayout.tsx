@@ -3,13 +3,14 @@ import { NavLink, Outlet, useNavigate, useLocation } from 'react-router'
 import { useAuth } from '../hooks/useAuth'
 import { useProfile } from '../context/ProfileContext'
 import { initials } from '../utils/format'
-import { LayoutDashboard, FolderArchive, Sparkles, Activity, Stethoscope, LogOut, ArrowLeftRight, UserCog, Menu, X } from 'lucide-react'
+import { LayoutDashboard, FolderArchive, Sparkles, Activity, TrendingUp, Stethoscope, LogOut, ArrowLeftRight, UserCog, Menu, X } from 'lucide-react'
 
 const navItems = [
   { to: '/app', label: 'Dashboard', icon: LayoutDashboard, end: true },
   { to: '/app/vault', label: 'Document Vault', icon: FolderArchive },
   { to: '/app/insights', label: 'AI Insights', icon: Sparkles },
   { to: '/app/timeline', label: 'Timeline', icon: Activity },
+  { to: '/app/trends', label: 'Trends', icon: TrendingUp },
   { to: '/app/clinical', label: 'Clinical Notes', icon: Stethoscope },
 ]
 

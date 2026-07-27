@@ -3,25 +3,18 @@ import { Link } from 'react-router'
 import { useProfile } from '../context/ProfileContext'
 import { listDocuments } from '../api/documents'
 import { listTimeline } from '../api/documents'
+import { getTrackedParameters, getParameterTrend } from '../api/parameters'
 import { Card, LoadingState, PageHeader } from '../components/ui'
-import type { DocumentSummaryResponse, TimelineEventResponse } from '../types/api'
+import type { DocumentSummaryResponse, ParameterTrendResponse, TimelineEventResponse } from '../types/api'
 import { documentTypeLabel, formatDate, formatDateTime, timelineEventLabel } from '../utils/format'
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
-import { Upload, FolderArchive, Plus } from 'lucide-react'
-
-const healthTrendData = [
-  { month: 'Jan', score: 72 },
-  { month: 'Feb', score: 74 },
-  { month: 'Mar', score: 71 },
-  { month: 'Apr', score: 78 },
-  { month: 'May', score: 82 },
-  { month: 'Jun', score: 85 },
-]
+import { Upload, FolderArchive, Plus, TrendingUp } from 'lucide-react'
 
 export default function DashboardPage() {
   const { activeProfile } = useProfile()
   const [documents, setDocuments] = useState<DocumentSummaryResponse[]>([])
   const [timeline, setTimeline] = useState<TimelineEventResponse[]>([])
+  const [trend, setTrend] = useState<ParameterTrendResponse | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -30,9 +23,15 @@ export default function DashboardPage() {
     Promise.all([
       listDocuments(activeProfile.memberId),
       listTimeline(activeProfile.memberId),
-    ]).then(([docsResult, eventsResult]) => {
+      getTrackedParameters(activeProfile.memberId),
+    ]).then(async ([docsResult, eventsResult, tracked]) => {
       setDocuments(docsResult.data)
       setTimeline(eventsResult.data)
+      // Load trend for first tracked parameter (if any)
+      if (tracked.parameterNames.length > 0) {
+        const trendData = await getParameterTrend(activeProfile.memberId, tracked.parameterNames[0])
+        setTrend(trendData)
+      }
     }).finally(() => setLoading(false))
   }, [activeProfile])
 
@@ -41,6 +40,11 @@ export default function DashboardPage() {
 
   const recentDocs = documents.slice(0, 4)
   const recentEvents = timeline.slice(0, 5)
+
+  const chartData = trend?.dataPoints.map(dp => ({
+    date: dp.date,
+    value: dp.value,
+  })) ?? []
 
   return (
     <>
@@ -56,27 +60,40 @@ export default function DashboardPage() {
         <StatCard label="Conditions" value={activeProfile.chronicConditions.length} />
       </div>
 
-      <Card className="mb-6 p-5">
-        <h2 className="mb-1 text-base font-black text-txtP">Health Score Trend</h2>
-        <p className="mb-4 text-sm text-txtS">Wellness indicator over the past 6 months</p>
-        <div className="h-52 w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={healthTrendData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
-              <defs>
-                <linearGradient id="healthGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#6366F1" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="#6366F1" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
-              <XAxis dataKey="month" tick={{ fontSize: 12, fill: '#64748B' }} axisLine={false} tickLine={false} />
-              <YAxis domain={[60, 100]} tick={{ fontSize: 12, fill: '#64748B' }} axisLine={false} tickLine={false} />
-              <Tooltip contentStyle={{ background: '#0F172A', border: 'none', borderRadius: '12px', color: '#fff', fontSize: '13px', fontWeight: 600, padding: '8px 14px' }} labelStyle={{ color: '#94A3B8' }} />
-              <Area type="monotone" dataKey="score" stroke="#6366F1" strokeWidth={2.5} fill="url(#healthGrad)" />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
-      </Card>
+      {chartData.length >= 2 && trend && (
+        <Card className="mb-6 p-5">
+          <div className="mb-1 flex items-center justify-between">
+            <div>
+              <h2 className="text-base font-black text-txtP">{trend.parameterName} Trend</h2>
+              <p className="text-sm text-txtS">Your latest tracked parameter over time</p>
+            </div>
+            <Link to="/app/trends" className="inline-flex items-center gap-1.5 text-sm font-bold text-pri hover:underline">
+              <TrendingUp size={14} />View all trends
+            </Link>
+          </div>
+          <div className="mt-4 h-52 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={chartData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="dashGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#6366F1" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#6366F1" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
+                <XAxis dataKey="date" tick={{ fontSize: 12, fill: '#64748B' }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 12, fill: '#64748B' }} axisLine={false} tickLine={false} />
+                <Tooltip
+                  contentStyle={{ background: '#0F172A', border: 'none', borderRadius: '12px', color: '#fff', fontSize: '13px', fontWeight: 600, padding: '8px 14px' }}
+                  labelStyle={{ color: '#94A3B8' }}
+                  formatter={(value: number) => [`${value} ${trend.unit}`, trend.parameterName]}
+                />
+                <Area type="monotone" dataKey="value" stroke="#6366F1" strokeWidth={2.5} fill="url(#dashGrad)" />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </Card>
+      )}
 
       <div className="mb-6 grid gap-4 md:grid-cols-3">
         <QuickLink title="Upload document" text="Add a report, prescription, bill, or ID to your vault." to="/app/insights" icon={Upload} />

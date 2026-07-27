@@ -64,4 +64,12 @@ public final class Dtos {
     public record ComparisonData(String parameterName, BigDecimal previousValue, BigDecimal currentValue,
                                  BigDecimal absoluteChange, Double percentChange, TrendDirection trend,
                                  String unit, BigDecimal referenceRangeLow, BigDecimal referenceRangeHigh) {}
+
+    /** Single data point on a parameter trend chart. */
+    public record ParameterDataPoint(LocalDate date, BigDecimal value, BigDecimal referenceRangeLow,
+                                     BigDecimal referenceRangeHigh) {}
+    /** Complete trend data for one parameter — name, unit, and ordered readings. */
+    public record ParameterTrendResponse(String parameterName, String unit, List<ParameterDataPoint> dataPoints) {}
+    /** All distinct parameter names tracked for a member. */
+    public record TrackedParametersResponse(List<String> parameterNames) {}
 }

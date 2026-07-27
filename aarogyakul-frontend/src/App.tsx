@@ -13,6 +13,7 @@ import MemberProfilePage from './pages/MemberProfilePage'
 import TimelinePage from './pages/TimelinePage'
 import UploadPage from './pages/UploadPage'
 import DocumentVaultPage from './pages/DocumentVaultPage'
+import TrendsPage from './pages/TrendsPage'
 import { ClinicalPage } from './pages/FeatureOverviewPages'
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
@@ -51,6 +52,7 @@ function App() {
             <Route path="/app/vault" element={<ErrorBoundary><DocumentVaultPage /></ErrorBoundary>} />
             <Route path="/app/insights" element={<ErrorBoundary><UploadPage /></ErrorBoundary>} />
             <Route path="/app/timeline" element={<ErrorBoundary><TimelinePage /></ErrorBoundary>} />
+            <Route path="/app/trends" element={<ErrorBoundary><TrendsPage /></ErrorBoundary>} />
             <Route path="/app/clinical" element={<ErrorBoundary><ClinicalPage /></ErrorBoundary>} />
             <Route path="/app/profile" element={<ErrorBoundary><MemberProfilePage /></ErrorBoundary>} />
           </Route>
