@@ -2,6 +2,8 @@ import { FormEvent, useCallback, useEffect, useState } from 'react'
 import { useProfile } from '../context/ProfileContext'
 import { createTimelineEvent, deleteTimelineEvent, listTimeline } from '../api/documents'
 import { Alert, Button, Card, EmptyState, LoadingState, PageHeader, SelectField, TextAreaField, TextField } from '../components/ui'
+import { useConfirm } from '../components/ConfirmDialog'
+import { useToast } from '../components/Toast'
 import type { TimelineEventResponse, TimelineEventType } from '../types/api'
 import { formatDate, timelineEventLabel } from '../utils/format'
 import { Plus, Trash2, Stethoscope, FlaskConical, Syringe, Pill, FileText, Scissors, StickyNote, X, Loader2 } from 'lucide-react'
@@ -39,6 +41,8 @@ export default function TimelinePage() {
   const [page, setPage] = useState(0)
   const [error, setError] = useState('')
   const [showAddModal, setShowAddModal] = useState(false)
+  const { confirm } = useConfirm()
+  const { toast } = useToast()
 
   const loadPage = useCallback(async (pageNum: number, append: boolean) => {
     if (!memberId) return
@@ -64,10 +68,17 @@ export default function TimelinePage() {
   }, [memberId, loadPage])
 
   const handleDelete = async (eventId: string) => {
-    if (!window.confirm('Delete this timeline entry?')) return
+    const ok = await confirm({
+      title: 'Delete timeline entry?',
+      message: 'This event will be permanently removed from the timeline.',
+      confirmLabel: 'Delete',
+      variant: 'danger',
+    })
+    if (!ok) return
     try {
       await deleteTimelineEvent(memberId, eventId)
       setEvents((prev) => prev.filter((e) => e.id !== eventId))
+      toast('Timeline event deleted', 'success')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not delete event')
     }
@@ -146,7 +157,7 @@ export default function TimelinePage() {
         <AddEventModal
           memberId={memberId}
           onClose={() => setShowAddModal(false)}
-          onCreated={() => { setShowAddModal(false); void loadPage(0, false) }}
+          onCreated={() => { setShowAddModal(false); toast('Event added to timeline', 'success'); void loadPage(0, false) }}
         />
       )}
     </>

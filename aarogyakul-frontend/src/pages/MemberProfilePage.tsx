@@ -18,11 +18,15 @@ import type { DocumentSummaryResponse, MemberResponse } from '../types/api'
 import { formatDate, initials } from '../utils/format'
 import { Pencil, X, Upload, ImagePlus } from 'lucide-react'
 import { useProfile } from '../context/ProfileContext'
+import { useConfirm } from '../components/ConfirmDialog'
+import { useToast } from '../components/Toast'
 
 export default function MemberProfilePage() {
   const { activeProfile, clearProfile } = useProfile()
   const memberId = activeProfile?.memberId || ''
   const navigate = useNavigate()
+  const { confirm } = useConfirm()
+  const { toast } = useToast()
   const [member, setMember] = useState<MemberResponse | null>(null)
   const [documents, setDocuments] = useState<DocumentSummaryResponse[]>([])
   const [loading, setLoading] = useState(true)
@@ -48,8 +52,15 @@ export default function MemberProfilePage() {
   }, [memberId])
 
   const handleDelete = async () => {
-    if (!window.confirm('Delete this member and their linked records?')) return
+    const ok = await confirm({
+      title: 'Delete this member?',
+      message: 'This will permanently remove the member and all their linked documents, timeline events, and medical records.',
+      confirmLabel: 'Delete Member',
+      variant: 'danger',
+    })
+    if (!ok) return
     await deleteMember(memberId)
+    toast('Member deleted', 'success')
     clearProfile()
     navigate('/app/profiles')
   }
