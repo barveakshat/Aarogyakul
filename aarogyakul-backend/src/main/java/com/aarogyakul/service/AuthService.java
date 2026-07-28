@@ -45,6 +45,17 @@ public class AuthService {
         return toAuthResponse(user);
     }
 
+    @Transactional
+    public void changePassword(java.util.UUID userId, String currentPassword, String newPassword) {
+        User user = users.findById(userId)
+                .orElseThrow(() -> ApiException.notFound("User not found"));
+        if (!passwordEncoder.matches(currentPassword, user.passwordHash)) {
+            throw ApiException.validation("Current password is incorrect");
+        }
+        user.passwordHash = passwordEncoder.encode(newPassword);
+        users.save(user);
+    }
+
     private AuthResponse toAuthResponse(User user) {
         return new AuthResponse(user.id, user.email, user.fullName, jwtService.createToken(user.id, user.email));
     }

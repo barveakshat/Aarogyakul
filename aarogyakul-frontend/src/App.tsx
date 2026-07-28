@@ -14,7 +14,9 @@ import TimelinePage from './pages/TimelinePage'
 import UploadPage from './pages/UploadPage'
 import DocumentVaultPage from './pages/DocumentVaultPage'
 import TrendsPage from './pages/TrendsPage'
+import SettingsPage from './pages/SettingsPage'
 import { ClinicalPage } from './pages/FeatureOverviewPages'
+import { PrivacyPage, TermsPage } from './pages/LegalPages'
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
@@ -54,8 +56,11 @@ function App() {
             <Route path="/app/timeline" element={<ErrorBoundary><TimelinePage /></ErrorBoundary>} />
             <Route path="/app/trends" element={<ErrorBoundary><TrendsPage /></ErrorBoundary>} />
             <Route path="/app/clinical" element={<ErrorBoundary><ClinicalPage /></ErrorBoundary>} />
+            <Route path="/app/settings" element={<ErrorBoundary><SettingsPage /></ErrorBoundary>} />
             <Route path="/app/profile" element={<ErrorBoundary><MemberProfilePage /></ErrorBoundary>} />
           </Route>
+          <Route path="/privacy" element={<PrivacyPage />} />
+          <Route path="/terms" element={<TermsPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </ErrorBoundary>

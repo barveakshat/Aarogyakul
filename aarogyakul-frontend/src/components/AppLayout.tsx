@@ -3,7 +3,7 @@ import { NavLink, Outlet, useNavigate, useLocation } from 'react-router'
 import { useAuth } from '../hooks/useAuth'
 import { useProfile } from '../context/ProfileContext'
 import { initials } from '../utils/format'
-import { LayoutDashboard, FolderArchive, Sparkles, Activity, TrendingUp, Stethoscope, LogOut, ArrowLeftRight, UserCog, Menu, X } from 'lucide-react'
+import { LayoutDashboard, FolderArchive, Sparkles, Activity, TrendingUp, Stethoscope, Settings, LogOut, ArrowLeftRight, UserCog, Menu, X } from 'lucide-react'
 
 const navItems = [
   { to: '/app', label: 'Dashboard', icon: LayoutDashboard, end: true },
@@ -12,6 +12,7 @@ const navItems = [
   { to: '/app/timeline', label: 'Timeline', icon: Activity },
   { to: '/app/trends', label: 'Trends', icon: TrendingUp },
   { to: '/app/clinical', label: 'Clinical Notes', icon: Stethoscope },
+  { to: '/app/settings', label: 'Settings', icon: Settings },
 ]
 
 /** Bottom nav items — subset of navItems for mobile tab bar */

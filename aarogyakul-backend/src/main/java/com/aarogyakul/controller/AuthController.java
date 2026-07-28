@@ -1,6 +1,7 @@
 package com.aarogyakul.controller;
 
 import com.aarogyakul.dto.Dtos.*;
+import com.aarogyakul.security.CurrentUser;
 import com.aarogyakul.service.AuthService;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
@@ -15,13 +16,15 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
     private static final String COOKIE_NAME = "aarogyakul_token";
     private final AuthService authService;
+    private final CurrentUser currentUser;
     private final long jwtExpiryHours;
     private final boolean cookieSecure;
 
-    public AuthController(AuthService authService,
+    public AuthController(AuthService authService, CurrentUser currentUser,
                           @Value("${app.jwt-expiry-hours}") long jwtExpiryHours,
                           @Value("${app.cookie-secure:false}") boolean cookieSecure) {
         this.authService = authService;
+        this.currentUser = currentUser;
         this.jwtExpiryHours = jwtExpiryHours;
         this.cookieSecure = cookieSecure;
     }
@@ -52,6 +55,12 @@ public class AuthController {
                 .maxAge(0)
                 .build();
         response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
+    }
+
+    @PostMapping("/api/account/password")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void changePassword(@Valid @RequestBody ChangePasswordRequest request) {
+        authService.changePassword(currentUser.id(), request.currentPassword(), request.newPassword());
     }
 
     private void setTokenCookie(HttpServletResponse response, String token) {
