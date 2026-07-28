@@ -99,7 +99,15 @@ export default function TimelinePage() {
       />
       {error ? <div className="mb-4"><Alert message={error} /></div> : null}
       {events.length === 0 ? (
-        <EmptyState title="Timeline is empty" description="Add your first event or upload a document to start building your health timeline." />
+        <EmptyState
+          title="Timeline is empty"
+          description="Add your first event or upload a document to start building your health timeline."
+          action={
+            <button onClick={() => setShowAddModal(true)} className="inline-flex items-center gap-2 rounded-btn bg-gradient-to-r from-pri to-sec px-4 py-2 text-sm font-bold text-white shadow-glow">
+              <Plus size={16} />Add First Event
+            </button>
+          }
+        />
       ) : (
         <Card className="p-5">
           <div className="relative space-y-6 before:absolute before:bottom-2 before:left-4 before:top-2 before:w-px before:bg-gradient-to-b before:from-pri before:to-sec">

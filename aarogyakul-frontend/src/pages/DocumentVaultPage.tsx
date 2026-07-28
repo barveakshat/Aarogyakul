@@ -90,7 +90,11 @@ export default function DocumentVaultPage() {
       </div>
 
       {filtered.length === 0 ? (
-        <EmptyState title="No documents yet" description="Upload your first document to start building your vault." />
+        <EmptyState
+          title="No documents yet"
+          description="Upload your first document to start building your vault."
+          action={<Link className="inline-flex items-center gap-2 rounded-btn bg-gradient-to-r from-pri to-sec px-4 py-2 text-sm font-bold text-white shadow-glow" to="/app/insights"><Upload size={16} />Upload Document</Link>}
+        />
       ) : (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {filtered.map((doc) => (
