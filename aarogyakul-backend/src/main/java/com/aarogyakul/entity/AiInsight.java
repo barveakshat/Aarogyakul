@@ -17,7 +17,7 @@ public class AiInsight {
     public FamilyMember familyMember;
     @Column(name = "summary_text", nullable = false, columnDefinition = "TEXT")
     public String summaryText;
-    @Column(name = "comparison_json", columnDefinition = "TEXT")
+    @Column(name = "comparison_json", columnDefinition = "JSONB")
     public String comparisonJson;
     @Column(name = "model_used", nullable = false)
     public String modelUsed;
