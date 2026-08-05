@@ -1,5 +1,5 @@
 import { FormEvent, useCallback, useEffect, useRef, useState } from 'react'
-import { Link, useNavigate } from 'react-router'
+import { useNavigate } from 'react-router'
 import {
   addAllergy,
   addCondition,
@@ -11,7 +11,6 @@ import {
   uploadProfilePhoto,
 } from '../api/family'
 import { listDocuments } from '../api/documents'
-import { DocumentList } from '../components/DocumentList'
 import { MemberForm } from '../components/MemberForm'
 import { Alert, Button, Card, LoadingState, PageHeader, SelectField, TextAreaField, TextField } from '../components/ui'
 import type { DocumentSummaryResponse, MemberResponse } from '../types/api'
@@ -146,16 +145,6 @@ export default function MemberProfilePage() {
             }}
             form={<ConditionForm memberId={memberId} onSaved={load} />}
           />
-          <DocumentList documents={documents} memberId={memberId} />
-          <Card className="p-5">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <h2 className="text-base font-semibold text-txtP">Timeline</h2>
-                <p className="mt-1 text-sm text-txtS">Review document events and extracted report summaries chronologically.</p>
-              </div>
-              <Link className="inline-flex rounded-btn border border-brd bg-white px-4 py-2 text-sm font-bold text-pri hover:border-pri" to={`/member/${memberId}/timeline`}>Open timeline</Link>
-            </div>
-          </Card>
         </div>
       </div>
 

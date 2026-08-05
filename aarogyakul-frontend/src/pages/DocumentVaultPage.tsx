@@ -1,11 +1,12 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router'
 import { useProfile } from '../context/ProfileContext'
-import { listDocuments } from '../api/documents'
-import { Card, EmptyState, LoadingState, PageHeader, StatusBadge } from '../components/ui'
+import { listDocuments, uploadDocument } from '../api/documents'
+import { Card, EmptyState, LoadingState, PageHeader, SelectField, StatusBadge } from '../components/ui'
+import { useToast } from '../components/Toast'
 import type { DocumentSummaryResponse, DocumentType } from '../types/api'
 import { documentTypeLabel, formatDateTime } from '../utils/format'
-import { FolderArchive, Upload, FileText, Receipt, Shield, CreditCard, FlaskConical, Loader2 } from 'lucide-react'
+import { FolderArchive, Upload, FileText, Receipt, Shield, CreditCard, FlaskConical, Loader2, X } from 'lucide-react'
 
 const PAGE_SIZE = 20
 
@@ -55,6 +56,31 @@ export default function DocumentVaultPage() {
     [documents, activeCategory],
   )
 
+  const [showUploadModal, setShowUploadModal] = useState(false)
+  const [uploadFile, setUploadFile] = useState<File | null>(null)
+  const [uploadType, setUploadType] = useState<DocumentType>('BLOOD_REPORT')
+  const [uploading, setUploading] = useState(false)
+  const fileRef = useRef<HTMLInputElement>(null)
+  const { toast } = useToast()
+
+  const documentTypes: DocumentType[] = ['BLOOD_REPORT', 'LAB_REPORT', 'PRESCRIPTION', 'DISCHARGE_SUMMARY', 'BILL', 'INSURANCE_DOC', 'MEDICAL_ID', 'OTHER']
+
+  const handleUpload = async () => {
+    if (!uploadFile || !activeProfile) return
+    setUploading(true)
+    try {
+      await uploadDocument(activeProfile.memberId, uploadFile, uploadType)
+      toast('Document uploaded', 'success')
+      setShowUploadModal(false)
+      setUploadFile(null)
+      void loadPage(0, false)
+    } catch {
+      toast('Upload failed', 'error')
+    } finally {
+      setUploading(false)
+    }
+  }
+
   if (loading) return <LoadingState label="Loading vault" />
 
   return (
@@ -62,7 +88,7 @@ export default function DocumentVaultPage() {
       <PageHeader
         title="Document Vault"
         description="Store and organize all your medical documents — reports, prescriptions, bills, insurance, and IDs."
-        action={<Link className="inline-flex items-center gap-2 rounded-btn bg-gradient-to-r from-pri to-sec px-4 py-2 text-sm font-bold text-white shadow-glow" to="/app/insights"><Upload size={16} />Upload</Link>}
+        action={<button onClick={() => setShowUploadModal(true)} className="inline-flex items-center gap-2 rounded-btn bg-gradient-to-r from-pri to-sec px-4 py-2 text-sm font-bold text-white shadow-glow"><Upload size={16} />Upload</button>}
       />
 
       <div className="mb-6 flex flex-wrap gap-2">
@@ -93,7 +119,7 @@ export default function DocumentVaultPage() {
         <EmptyState
           title="No documents yet"
           description="Upload your first document to start building your vault."
-          action={<Link className="inline-flex items-center gap-2 rounded-btn bg-gradient-to-r from-pri to-sec px-4 py-2 text-sm font-bold text-white shadow-glow" to="/app/insights"><Upload size={16} />Upload Document</Link>}
+          action={<button onClick={() => setShowUploadModal(true)} className="inline-flex items-center gap-2 rounded-btn bg-gradient-to-r from-pri to-sec px-4 py-2 text-sm font-bold text-white shadow-glow"><Upload size={16} />Upload Document</button>}
         />
       ) : (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -131,6 +157,32 @@ export default function DocumentVaultPage() {
               'Load More'
             )}
           </button>
+        </div>
+      )}
+
+      {/* Upload Modal */}
+      {showUploadModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fdIn" onClick={() => setShowUploadModal(false)}>
+          <div className="relative mx-4 w-full max-w-sm rounded-crd border border-brd bg-white p-6 shadow-glow" onClick={e => e.stopPropagation()}>
+            <button onClick={() => setShowUploadModal(false)} className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full text-txtS hover:bg-brd/50 hover:text-txtP"><X size={18} /></button>
+            <h3 className="text-lg font-black text-txtP">Upload Document</h3>
+            <p className="mt-1 text-sm text-txtS">Select a file and document type.</p>
+            <div className="mt-5 space-y-4">
+              <SelectField label="Document type" value={uploadType} onChange={e => setUploadType(e.target.value as DocumentType)}>
+                {documentTypes.map(t => <option key={t} value={t}>{documentTypeLabel(t)}</option>)}
+              </SelectField>
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wide text-txtS mb-1.5">File (PDF, max 15 MB)</label>
+                <input ref={fileRef} type="file" accept=".pdf" onChange={e => setUploadFile(e.target.files?.[0] || null)} className="block w-full text-sm text-txtS file:mr-3 file:rounded-btn file:border-0 file:bg-pri/10 file:px-3 file:py-2 file:text-sm file:font-bold file:text-pri hover:file:bg-pri/20" />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button onClick={() => setShowUploadModal(false)} className="flex-1 rounded-btn border border-brd bg-white px-4 py-2.5 text-sm font-bold text-txtP hover:bg-brd/30">Cancel</button>
+                <button onClick={handleUpload} disabled={!uploadFile || uploading} className="flex-1 rounded-btn bg-gradient-to-r from-pri to-sec px-4 py-2.5 text-sm font-bold text-white disabled:opacity-60">
+                  {uploading ? 'Uploading...' : 'Upload'}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </>
