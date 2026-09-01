@@ -3,8 +3,8 @@ spring:
     name: aarogyakul-backend
   datasource:
     url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/aarogyakul}
-    username: ${DATABASE_USERNAME:aarogyakul}
-    password: ${DATABASE_PASSWORD:aarogyakul}
+    username: ${DATABASE_USERNAME}
+    password: ${DATABASE_PASSWORD}
   jpa:
     open-in-view: false
     hibernate:
@@ -25,7 +25,7 @@ server:
 
 app:
   cors-origin: ${SERVER_CORS_ORIGIN:http://localhost:5173}
-  jwt-secret: ${JWT_SECRET:change-me-change-me-change-me-change-me-32chars}
+  jwt-secret: ${JWT_SECRET}
   jwt-expiry-hours: ${JWT_EXPIRY_HOURS:24}
   storage-mode: ${STORAGE_MODE:local}
   local-storage-dir: ${LOCAL_STORAGE_DIR:${java.io.tmpdir}/aarogyakul-documents}
