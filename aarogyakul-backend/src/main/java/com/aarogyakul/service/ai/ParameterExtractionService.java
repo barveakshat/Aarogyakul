@@ -18,6 +18,19 @@ public class ParameterExtractionService {
     static final String EXTRACTION_PROMPT = """
             You are a medical document parser. You will be given raw text extracted from a blood test report. Extract every lab parameter you can find into a JSON array. For each parameter, include: name (the parameter name as written, e.g. "HbA1c", "Total Cholesterol", "Vitamin D"), value (numeric only, no units), unit (e.g. "%", "mg/dL"), referenceRangeLow and referenceRangeHigh (numeric, null if not stated). Also extract the report date if present, in YYYY-MM-DD format.
 
+            CRITICAL — Scientific notation and multiplier handling:
+            CBC reports often show values with multipliers like "x10^3/µL", "x10^6/µL", "10^3/uL", "thou/µL", or "mill/µL".
+            You MUST output the value AS PRINTED before the multiplier, and include the full multiplier as part of the unit.
+            Examples:
+            - "RBC Count: 4.5 x10^6/µL" → value: 4.5, unit: "x10^6/µL"
+            - "WBC: 7.8 x10^3/µL" → value: 7.8, unit: "x10^3/µL"
+            - "Platelet Count: 250 x10^3/µL" → value: 250, unit: "x10^3/µL"
+            - "RBC: 4.5 mill/µL" → value: 4.5, unit: "mill/µL"
+            Do NOT multiply the value by the power of 10. Do NOT produce values like 4500000 or 7800.
+            Apply the same rule to referenceRangeLow and referenceRangeHigh.
+
+            All numeric values must be plain numbers (no scientific notation like 1e6 or 3.72E+10). Maximum 7 integer digits.
+
             Respond with ONLY valid JSON in this exact shape, no markdown fences, no commentary:
             {
               "reportDate": "YYYY-MM-DD or null",

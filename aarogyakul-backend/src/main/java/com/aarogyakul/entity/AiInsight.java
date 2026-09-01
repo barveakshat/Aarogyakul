@@ -18,6 +18,7 @@ public class AiInsight {
     @Column(name = "summary_text", nullable = false, columnDefinition = "TEXT")
     public String summaryText;
     @Column(name = "comparison_json", columnDefinition = "JSONB")
+    @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.JSON)
     public String comparisonJson;
     @Column(name = "model_used", nullable = false)
     public String modelUsed;
