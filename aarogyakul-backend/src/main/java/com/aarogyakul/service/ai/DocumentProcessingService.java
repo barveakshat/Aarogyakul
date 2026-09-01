@@ -83,14 +83,30 @@ public class DocumentProcessingService {
 
             List<MedicalParameter> saved = new ArrayList<>();
             for (ExtractedParameter extracted : report.parameters()) {
+                if (!ParameterUtils.isSafeForStorage(extracted.value())) {
+                    log.warn("Skipping parameter '{}' for doc {}: value {} exceeds NUMERIC(10,3) range — likely LLM scientific-notation error",
+                            extracted.name(), documentId, extracted.value());
+                    continue;
+                }
                 MedicalParameter parameter = new MedicalParameter();
                 parameter.document = document;
                 parameter.familyMember = document.familyMember;
                 parameter.parameterName = extracted.name();
                 parameter.value = extracted.value();
                 parameter.unit = extracted.unit();
-                parameter.referenceRangeLow = extracted.referenceRangeLow();
-                parameter.referenceRangeHigh = extracted.referenceRangeHigh();
+                // Null out reference range fields that overflow rather than crashing the whole document
+                parameter.referenceRangeLow  = ParameterUtils.isSafeForStorage(extracted.referenceRangeLow())
+                        ? extracted.referenceRangeLow() : null;
+                parameter.referenceRangeHigh = ParameterUtils.isSafeForStorage(extracted.referenceRangeHigh())
+                        ? extracted.referenceRangeHigh() : null;
+                if (parameter.referenceRangeLow == null && extracted.referenceRangeLow() != null) {
+                    log.warn("Nulled referenceRangeLow for '{}' (doc {}): value {} exceeds NUMERIC(10,3) range",
+                            extracted.name(), documentId, extracted.referenceRangeLow());
+                }
+                if (parameter.referenceRangeHigh == null && extracted.referenceRangeHigh() != null) {
+                    log.warn("Nulled referenceRangeHigh for '{}' (doc {}): value {} exceeds NUMERIC(10,3) range",
+                            extracted.name(), documentId, extracted.referenceRangeHigh());
+                }
                 parameter.reportDate = reportDate;
                 parameter.confidence = ParameterUtils.assessConfidence(extracted.name(), extracted.value()).name();
                 saved.add(parameters.save(parameter));

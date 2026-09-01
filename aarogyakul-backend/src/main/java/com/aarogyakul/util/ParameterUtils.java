@@ -4,6 +4,8 @@ import java.math.BigDecimal;
 import java.util.Locale;
 import java.util.Map;
 
+// NUMERIC(10,3) → max absolute integer part = 10-3 = 7 digits → 9_999_999.999
+
 public final class ParameterUtils {
     private static final Map<String, String> SYNONYMS = Map.ofEntries(
             Map.entry("hba1c", "HbA1c"),
@@ -53,6 +55,12 @@ public final class ParameterUtils {
             Map.entry("WBC",                      new double[]{0.5,   100.0})
     );
 
+    /**
+     * Maximum absolute value storable in the NUMERIC(10,3) database columns
+     * used for value, referenceRangeLow, and referenceRangeHigh.
+     */
+    public static final BigDecimal NUMERIC_MAX = new BigDecimal("9999999.999");
+
     private ParameterUtils() {}
 
     public static String canonicalize(String value) {
@@ -79,5 +87,15 @@ public final class ParameterUtils {
         double v = value.doubleValue();
         if (v < bounds[0] || v > bounds[1]) return Enums.ConfidenceLevel.LOW;
         return Enums.ConfidenceLevel.HIGH;
+    }
+
+    /**
+     * Returns true if the value can be stored in a NUMERIC(10,3) column.
+     * Values from the LLM occasionally exceed this due to scientific-notation
+     * misinterpretation (e.g. 3.72E+10 instead of 3.72E+6 for RBC count).
+     */
+    public static boolean isSafeForStorage(BigDecimal value) {
+        if (value == null) return true;
+        return value.abs().compareTo(NUMERIC_MAX) <= 0;
     }
 }
