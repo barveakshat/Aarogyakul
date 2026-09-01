@@ -2,8 +2,8 @@ import { useState } from 'react'
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router'
 import { useAuth } from '../hooks/useAuth'
 import { useProfile } from '../context/ProfileContext'
-import { initials } from '../utils/format'
 import { LayoutDashboard, FolderArchive, Sparkles, Activity, TrendingUp, Stethoscope, Settings, LogOut, ArrowLeftRight, UserCog, Menu, X } from 'lucide-react'
+import { Avatar } from './Avatar'
 
 const navItems = [
   { to: '/app', label: 'Dashboard', icon: LayoutDashboard, end: true },
@@ -61,13 +61,7 @@ export function AppLayout() {
         {activeProfile && (
           <div className="px-4 py-4 border-b border-white/5">
             <div className="flex items-center gap-3">
-              {activeProfile.profilePhotoUrl ? (
-                <img src={activeProfile.profilePhotoUrl} alt={activeProfile.fullName} className="h-10 w-10 rounded-full object-cover" />
-              ) : (
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-pri/30 to-sec/30 text-sm font-bold text-white">
-                  {initials(activeProfile.fullName)}
-                </div>
-              )}
+              <Avatar name={activeProfile.fullName} photoUrl={activeProfile.profilePhotoUrl} size="md" />
               <div className="min-w-0 flex-1">
                 <div className="truncate text-sm font-semibold text-white">{activeProfile.fullName}</div>
                 <div className="truncate text-xs text-sbT">{activeProfile.relationshipToOwner || 'Member'}</div>
@@ -151,13 +145,7 @@ export function AppLayout() {
             <div className="p-4 space-y-2">
               {activeProfile && (
                 <div className="flex items-center gap-3 mb-3 pb-3 border-b border-white/10">
-                  {activeProfile.profilePhotoUrl ? (
-                    <img src={activeProfile.profilePhotoUrl} alt={activeProfile.fullName} className="h-9 w-9 rounded-full object-cover" />
-                  ) : (
-                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-pri/30 to-sec/30 text-xs font-bold text-white">
-                      {initials(activeProfile.fullName)}
-                    </div>
-                  )}
+                  <Avatar name={activeProfile.fullName} photoUrl={activeProfile.profilePhotoUrl} size="sm" />
                   <div className="flex-1 min-w-0">
                     <div className="truncate text-sm font-semibold text-white">{activeProfile.fullName}</div>
                   </div>

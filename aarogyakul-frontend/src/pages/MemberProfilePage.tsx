@@ -14,11 +14,12 @@ import { listDocuments } from '../api/documents'
 import { MemberForm } from '../components/MemberForm'
 import { Alert, Button, Card, LoadingState, PageHeader, SelectField, TextAreaField, TextField } from '../components/ui'
 import type { DocumentSummaryResponse, MemberResponse } from '../types/api'
-import { formatDate, initials } from '../utils/format'
+import { formatDate } from '../utils/format'
 import { Pencil, X, Upload, ImagePlus } from 'lucide-react'
 import { useProfile } from '../context/ProfileContext'
 import { useConfirm } from '../components/ConfirmDialog'
 import { useToast } from '../components/Toast'
+import { Avatar } from '../components/Avatar'
 
 export default function MemberProfilePage() {
   const { activeProfile, clearProfile } = useProfile()
@@ -80,11 +81,7 @@ export default function MemberProfilePage() {
           <Card className="p-5">
             <div className="flex items-start gap-4">
               <div className="relative group shrink-0">
-                {member.profilePhotoUrl ? (
-                  <img className="h-20 w-20 rounded-full object-cover shadow-crd" src={member.profilePhotoUrl} alt={`${member.fullName} profile`} />
-                ) : (
-                  <div className="flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-pri/15 to-sec/15 text-lg font-black text-pri">{initials(member.fullName)}</div>
-                )}
+                <Avatar name={member.fullName} photoUrl={member.profilePhotoUrl} size="lg" />
                 <button
                   type="button"
                   onClick={() => setShowPhotoModal(true)}

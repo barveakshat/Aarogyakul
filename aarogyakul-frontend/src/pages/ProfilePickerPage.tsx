@@ -4,9 +4,9 @@ import { useProfile } from '../context/ProfileContext'
 import { createFamily, createMember } from '../api/family'
 import { MemberForm } from '../components/MemberForm'
 import { Button, Card, LoadingState, TextField } from '../components/ui'
-import { initials } from '../utils/format'
 import { Plus, LogOut } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
+import { Avatar } from '../components/Avatar'
 import type { MemberResponse } from '../types/api'
 
 export default function ProfilePickerPage() {
@@ -87,13 +87,12 @@ export default function ProfilePickerPage() {
                   onClick={() => handleSelect(member)}
                   className="group flex flex-col items-center gap-3 rounded-crd p-5 transition-all duration-300 hover:-translate-y-1 hover:shadow-glow hover:bg-white/80 focus:outline-none focus:ring-4 focus:ring-pri/20"
                 >
-                  {member.profilePhotoUrl ? (
-                    <img src={member.profilePhotoUrl} alt={member.fullName} className="h-24 w-24 rounded-full object-cover shadow-crd transition-transform duration-300 group-hover:scale-105" />
-                  ) : (
-                    <div className="flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-br from-pri/15 to-sec/15 text-2xl font-black text-pri shadow-crd transition-transform duration-300 group-hover:scale-105">
-                      {initials(member.fullName)}
-                    </div>
-                  )}
+                  <Avatar
+                    name={member.fullName}
+                    photoUrl={member.profilePhotoUrl}
+                    size="xl"
+                    className="transition-transform duration-300 group-hover:scale-105"
+                  />
                   <span className="text-sm font-bold text-txtP group-hover:text-pri transition-colors">{member.fullName}</span>
                   <span className="text-xs text-txtS">{member.relationshipToOwner || 'Member'}</span>
                 </button>

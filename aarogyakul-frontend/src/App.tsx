@@ -28,7 +28,10 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
 function ProfileGuard({ children }: { children: React.ReactNode }) {
   const { activeProfile, loading } = useProfile()
   if (loading) return <LoadingState label="Loading profile" />
-  if (!activeProfile) return <Navigate to="/app/profiles" replace />
+  // Also check localStorage — setActiveProfile writes there synchronously,
+  // but the React state update may not have propagated yet when navigate() fires.
+  const hasStoredProfile = !!localStorage.getItem('aarogyakul_active_profile_id')
+  if (!activeProfile && !hasStoredProfile) return <Navigate to="/app/profiles" replace />
   return <>{children}</>
 }
 
