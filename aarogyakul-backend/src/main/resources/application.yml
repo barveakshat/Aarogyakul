@@ -25,6 +25,7 @@ server:
 
 app:
   cors-origin: ${SERVER_CORS_ORIGIN:http://localhost:5173}
+  cookie-secure: ${COOKIE_SECURE:false}
   jwt-secret: ${JWT_SECRET}
   jwt-expiry-hours: ${JWT_EXPIRY_HOURS:24}
   storage-mode: ${STORAGE_MODE:local}
