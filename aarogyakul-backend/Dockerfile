@@ -25,7 +25,9 @@ RUN groupadd --gid 1001 spring && \
     useradd --uid 1001 --gid spring --shell /bin/bash --create-home spring
 
 COPY --from=build /build/target/*.jar app.jar
-RUN chown spring:spring app.jar
+RUN chown spring:spring app.jar && \
+    mkdir -p /app/uploads && \
+    chown spring:spring /app/uploads
 
 USER spring
 
