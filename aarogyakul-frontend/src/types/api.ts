@@ -28,10 +28,11 @@ export interface RegisterRequest extends LoginRequest {
   phoneNumber?: string
 }
 
-export interface AuthResponse {
-  userId: UUID
-  email: string
-  fullName: string
+export interface AuthUserResponse {
+  userId: string;
+  email: string;
+  fullName: string;
+  accessToken: string;
 }
 
 export interface CreateFamilyRequest {

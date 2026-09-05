@@ -8,7 +8,14 @@ export const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  withCredentials: true,
+})
+
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('ak_token')
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`
+  }
+  return config
 })
 
 api.interceptors.response.use(
@@ -16,6 +23,7 @@ api.interceptors.response.use(
   (error: AxiosError<ApiErrorEnvelope>) => {
     if (error.response?.status === 401) {
       localStorage.removeItem('ak_user')
+      localStorage.removeItem('ak_token')
       window.location.href = '/login'
     }
 

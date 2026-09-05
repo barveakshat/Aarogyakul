@@ -27,6 +27,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (email: string, password: string) => {
     const data = await authApi.login({ email, password })
+    localStorage.setItem('ak_token', data.accessToken)
     setSession({
       id: data.userId, 
       email: data.email, 
@@ -36,6 +37,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const register = async (payload: RegisterRequest) => {
     const response = await authApi.register(payload)
+    localStorage.setItem('ak_token', response.accessToken)
     setSession({
       id: response.userId, 
       email: response.email, 
@@ -55,6 +57,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Server may be unreachable — clear local state anyway
     }
     localStorage.removeItem(USER_KEY)
+    localStorage.removeItem('ak_token')
     setUser(null)
   }
 

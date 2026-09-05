@@ -19,7 +19,7 @@ public final class Dtos {
                                   @NotBlank String fullName, String phoneNumber) {}
     public record LoginRequest(@Email @NotBlank String email, @NotBlank String password) {}
     public record AuthResponse(UUID userId, String email, String fullName, String accessToken) {}
-    public record AuthUserResponse(UUID userId, String email, String fullName) {}
+    public record AuthUserResponse(UUID userId, String email, String fullName, String accessToken) {}
     public record ChangePasswordRequest(@NotBlank String currentPassword, @Size(min = 8) String newPassword) {}
 
     public record CreateFamilyRequest(@NotBlank String familyName) {}
