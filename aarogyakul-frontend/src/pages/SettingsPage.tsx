@@ -7,7 +7,7 @@ import { useToast } from '../components/Toast'
 import { Shield, FileText, Lock, User } from 'lucide-react'
 
 export default function SettingsPage() {
-  const { user, logout } = useAuth()
+  const { user, logout, isDemo } = useAuth()
   const { toast } = useToast()
 
   const [currentPw, setCurrentPw] = useState('')
@@ -19,6 +19,13 @@ export default function SettingsPage() {
   const handlePasswordChange = async (e: FormEvent) => {
     e.preventDefault()
     setPwError('')
+    
+    // DEMO GUARD
+    if (isDemo) {
+      setPwError('You are viewing a live demo. Account settings cannot be changed.')
+      return
+    }
+
     if (newPw.length < 8) { setPwError('New password must be at least 8 characters'); return }
     if (newPw !== confirmPw) { setPwError('New passwords do not match'); return }
     if (currentPw === newPw) { setPwError('New password must be different from current password'); return }

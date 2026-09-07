@@ -7,6 +7,7 @@ import { useToast } from '../components/Toast'
 import type { TimelineEventResponse, TimelineEventType } from '../types/api'
 import { formatDate, timelineEventLabel } from '../utils/format'
 import { Plus, Trash2, Stethoscope, FlaskConical, Syringe, Pill, FileText, Scissors, StickyNote, X, Loader2 } from 'lucide-react'
+import { isDemoMode } from '../demo/demoApi'
 
 const PAGE_SIZE = 20
 
@@ -68,6 +69,12 @@ export default function TimelinePage() {
   }, [memberId, loadPage])
 
   const handleDelete = async (eventId: string) => {
+    // DEMO GUARD
+    if (isDemoMode()) {
+      toast('You are viewing a live demo. Deletions are disabled.', 'error')
+      return
+    }
+
     const ok = await confirm({
       title: 'Delete timeline entry?',
       message: 'This event will be permanently removed from the timeline.',
@@ -179,8 +186,16 @@ function AddEventModal({ memberId, onClose, onCreated }: { memberId: string; onC
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
+    // DEMO GUARD
+    if (isDemoMode()) {
+      setError('You are viewing a live demo. Adding events is disabled.')
+      setSubmitting(false)
+      return
+    }
+
     setSubmitting(true)
     setError('')
+    
     try {
       await createTimelineEvent(memberId, {
         title: form.title,

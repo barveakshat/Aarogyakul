@@ -2,6 +2,8 @@ import { createContext, useCallback, useContext, useEffect, useState } from 'rea
 import type { MemberResponse, FamilyResponse } from '../types/api'
 import { useAuth } from '../hooks/useAuth'
 import { getMyFamily } from '../api/family'
+import { demoGetMyFamily, isDemoMode } from '../demo/demoApi'
+import { MEMBER_RAJESH_ID } from '../demo/demoData'
 
 interface ProfileContextValue {
   activeProfile: MemberResponse | null
@@ -21,12 +23,13 @@ export function useProfile() {
 const STORAGE_KEY = 'aarogyakul_active_profile_id'
 
 export function ProfileProvider({ children }: { children: React.ReactNode }) {
-  const { user } = useAuth()
+  const { user, isDemo } = useAuth()
   const [family, setFamily] = useState<FamilyResponse | null>(null)
   const [activeProfile, setActiveProfileState] = useState<MemberResponse | null>(null)
   const [loading, setLoading] = useState(true)
 
   const fetchFamily = useCallback(async (): Promise<FamilyResponse | null> => {
+    if (isDemoMode()) return demoGetMyFamily()
     try {
       return await getMyFamily()
     } catch {
@@ -44,14 +47,24 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
     const f = await fetchFamily()
     setFamily(f)
     if (f) {
-      const savedId = localStorage.getItem(STORAGE_KEY)
-      if (savedId) {
+      if (isDemo) {
+        // Auto-select Rajesh Sharma in demo mode, or fall back to storage
+        const savedId = localStorage.getItem(STORAGE_KEY) || MEMBER_RAJESH_ID
         const found = f.members.find((m) => m.memberId === savedId)
-        if (found) setActiveProfileState(found)
+        if (found) {
+          setActiveProfileState(found)
+          localStorage.setItem(STORAGE_KEY, found.memberId)
+        }
+      } else {
+        const savedId = localStorage.getItem(STORAGE_KEY)
+        if (savedId) {
+          const found = f.members.find((m) => m.memberId === savedId)
+          if (found) setActiveProfileState(found)
+        }
       }
     }
     setLoading(false)
-  }, [user, fetchFamily])
+  }, [user, fetchFamily, isDemo])
 
   useEffect(() => {
     void loadFamily()

@@ -3,7 +3,7 @@ import { useAuth } from '../hooks/useAuth'
 import { Button, Card } from '../components/ui'
 import {
   Shield, Brain, Users, FolderArchive, Activity, Stethoscope,
-  FileText, ArrowRight, Check, Zap, Lock, Heart, ChevronRight,
+  FileText, ArrowRight, Check, Zap, Lock, Heart, Play
 } from 'lucide-react'
 
 const features = [
@@ -33,7 +33,7 @@ const features = [
     description: 'Track allergies with severity levels and chronic conditions with diagnosis dates. Everything your doctor needs in one glance.',
   },
   {
-    icon: Activity, // Replaced Sparkles with Activity as Sparkles was requested to be removed from some places or just to keep it simple. Actually, we can just use Activity.
+    icon: Activity, 
     title: 'Trend Insights',
     description: 'See how your HbA1c, cholesterol, or vitamin levels changed over time. Color-coded tables flag what needs attention instantly.',
   },
@@ -61,7 +61,7 @@ const workflow = [
 ]
 
 export default function LandingPage() {
-  const { user } = useAuth()
+  const { user, enterDemo } = useAuth()
   const primaryHref = user ? '/app' : '/register'
   const primaryLabel = user ? 'Open dashboard' : 'Get started free'
 
@@ -123,9 +123,11 @@ export default function LandingPage() {
                   <Link to={primaryHref}>
                     <Button className="w-full px-7 py-3.5 text-base sm:w-auto bg-focus text-white rounded-md font-semibold">{primaryLabel}</Button>
                   </Link>
-                  <Link to="#how-it-works" className="inline-flex items-center justify-center gap-2 rounded-md border border-line bg-white px-6 py-3.5 text-sm font-semibold text-deep hover:border-focus hover:text-focus transition-all">
-                    See how it works <ChevronRight size={16} />
-                  </Link>
+                  {!user && (
+                    <Link to="/app" onClick={enterDemo} className="inline-flex items-center justify-center gap-2 rounded-md border border-line bg-white px-6 py-3.5 text-sm font-semibold text-deep hover:border-focus hover:text-focus transition-all">
+                      <Play size={16} /> View Live Demo
+                    </Link>
+                  )}
                 </div>
 
                 {/* Trust badges */}
@@ -260,9 +262,11 @@ export default function LandingPage() {
               <Link to={primaryHref}>
                 <Button className="px-8 py-3.5 text-base bg-focus text-white rounded-md font-semibold">{primaryLabel}</Button>
               </Link>
-              <Link to="/login" className="text-sm font-semibold text-white/80 hover:text-white transition-colors">
-                Already have an account? Sign in →
-              </Link>
+              {!user && (
+                <Link to="/app" onClick={enterDemo} className="inline-flex items-center justify-center gap-2 rounded-md border border-white/20 px-6 py-3.5 text-sm font-semibold text-white hover:bg-white/10 transition-all">
+                  <Play size={16} /> View Live Demo
+                </Link>
+              )}
             </div>
           </div>
         </section>

@@ -74,8 +74,8 @@ export default function DocumentVaultPage() {
       setShowUploadModal(false)
       setUploadFile(null)
       void loadPage(0, false)
-    } catch {
-      toast('Upload failed', 'error')
+    } catch (err: any) {
+      toast(err.message || 'Upload failed', 'error')
     } finally {
       setUploading(false)
     }

@@ -19,9 +19,9 @@ import { ClinicalPage } from './pages/FeatureOverviewPages'
 import { PrivacyPage, TermsPage } from './pages/LegalPages'
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth()
+  const { user, isDemo, loading } = useAuth()
   if (loading) return <LoadingState label="Preparing AarogyaKul" />
-  if (!user) return <Navigate to="/login" replace />
+  if (!user && !isDemo) return <Navigate to="/login" replace />
   return <>{children}</>
 }
 

@@ -6,6 +6,7 @@ import type { DocumentResponse, DocumentSummaryResponse, DocumentType } from '..
 import { documentTypeLabel, formatDate, formatDateTime } from '../utils/format'
 import { Plus, X } from 'lucide-react'
 import { useProfile } from '../context/ProfileContext'
+import { isDemoMode } from '../demo/demoApi'
 
 const maxPdfSize = 15 * 1024 * 1024
 const documentTypes: DocumentType[] = ['BLOOD_REPORT', 'LAB_REPORT', 'PRESCRIPTION', 'DISCHARGE_SUMMARY', 'BILL', 'INSURANCE_DOC', 'MEDICAL_ID', 'OTHER']
@@ -106,6 +107,13 @@ export default function UploadPage() {
   const handleUpload = async (event: FormEvent) => {
     event.preventDefault()
     setError('')
+    
+    // DEMO GUARD: Check if running in demo mode
+    if (isDemoMode()) {
+      setError('You are viewing a live demo. Uploads are disabled.')
+      return
+    }
+
     if (!file) {
       setError('Choose a PDF file before uploading.')
       return

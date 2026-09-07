@@ -20,6 +20,7 @@ import { useProfile } from '../context/ProfileContext'
 import { useConfirm } from '../components/ConfirmDialog'
 import { useToast } from '../components/Toast'
 import { Avatar } from '../components/Avatar'
+import { isDemoMode } from '../demo/demoApi'
 
 export default function MemberProfilePage() {
   const { activeProfile, clearProfile } = useProfile()
@@ -52,6 +53,12 @@ export default function MemberProfilePage() {
   }, [memberId])
 
   const handleDelete = async () => {
+    // DEMO GUARD
+    if (isDemoMode()) {
+      toast('You are viewing a live demo. Deletions are disabled.', 'error')
+      return
+    }
+
     const ok = await confirm({
       title: 'Delete this member?',
       message: 'This will permanently remove the member and all their linked documents, timeline events, and medical records.',
@@ -111,7 +118,12 @@ export default function MemberProfilePage() {
                 initial={member}
                 submitLabel="Save changes"
                 onSubmit={async (payload) => {
+                  if (isDemoMode()) {
+                    toast('You are viewing a live demo. Edits are disabled.', 'error')
+                    return
+                  }
                   setMember(await updateMember(memberId, payload))
+                  toast('Profile updated', 'success')
                 }}
               />
             </div>
@@ -127,6 +139,10 @@ export default function MemberProfilePage() {
             empty="No allergies recorded."
             items={member.allergies.map((item) => ({ id: item.id, title: item.allergen, meta: item.severity, notes: item.notes }))}
             onDelete={async (id) => {
+              if (isDemoMode()) {
+                toast('You are viewing a live demo. Deletions are disabled.', 'error')
+                return
+              }
               await deleteAllergy(memberId, id)
               await load()
             }}
@@ -137,6 +153,10 @@ export default function MemberProfilePage() {
             empty="No chronic conditions recorded."
             items={member.chronicConditions.map((item) => ({ id: item.id, title: item.conditionName, meta: formatDate(item.diagnosedDate), notes: item.notes }))}
             onDelete={async (id) => {
+              if (isDemoMode()) {
+                toast('You are viewing a live demo. Deletions are disabled.', 'error')
+                return
+              }
               await deleteCondition(memberId, id)
               await load()
             }}
@@ -335,11 +355,19 @@ function ClinicalList({
 
 function AllergyForm({ memberId, onSaved }: { memberId: string; onSaved: () => Promise<void> }) {
   const [form, setForm] = useState({ allergen: '', severity: '', notes: '' })
+  const { toast } = useToast()
   return (
     <form
       className="grid gap-3 sm:grid-cols-3"
       onSubmit={(event: FormEvent) => {
         event.preventDefault()
+        
+        // DEMO GUARD
+        if (isDemoMode()) {
+          toast('You are viewing a live demo. Adding allergies is disabled.', 'error')
+          return
+        }
+
         void addAllergy(memberId, { allergen: form.allergen, severity: form.severity || undefined, notes: form.notes || undefined }).then(async () => {
           setForm({ allergen: '', severity: '', notes: '' })
           await onSaved()
@@ -361,11 +389,19 @@ function AllergyForm({ memberId, onSaved }: { memberId: string; onSaved: () => P
 
 function ConditionForm({ memberId, onSaved }: { memberId: string; onSaved: () => Promise<void> }) {
   const [form, setForm] = useState({ conditionName: '', diagnosedDate: '', notes: '' })
+  const { toast } = useToast()
   return (
     <form
       className="grid gap-3 sm:grid-cols-2"
       onSubmit={(event: FormEvent) => {
         event.preventDefault()
+        
+        // DEMO GUARD
+        if (isDemoMode()) {
+          toast('You are viewing a live demo. Adding conditions is disabled.', 'error')
+          return
+        }
+
         void addCondition(memberId, {
           conditionName: form.conditionName,
           diagnosedDate: form.diagnosedDate || undefined,

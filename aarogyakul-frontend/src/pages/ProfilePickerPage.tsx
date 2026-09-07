@@ -7,6 +7,7 @@ import { Button, Card, LoadingState, TextField } from '../components/ui'
 import { Plus, LogOut } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import { Avatar } from '../components/Avatar'
+import { useToast } from '../components/Toast'
 import type { MemberResponse } from '../types/api'
 
 export default function ProfilePickerPage() {
@@ -17,6 +18,7 @@ export default function ProfilePickerPage() {
   const [showFamilyCreate, setShowFamilyCreate] = useState(false)
   const [familyName, setFamilyName] = useState('')
   const [creating, setCreating] = useState(false)
+  const { toast } = useToast()
 
   if (loading) return <LoadingState label="Loading profiles" />
 
@@ -117,9 +119,13 @@ export default function ProfilePickerPage() {
                   <MemberForm
                     submitLabel="Add profile"
                     onSubmit={async (payload) => {
-                      await createMember(family.familyId, payload)
-                      await reloadFamily()
-                      setShowAddForm(false)
+                      try {
+                        await createMember(family.familyId, payload)
+                        await reloadFamily()
+                        setShowAddForm(false)
+                      } catch (err: any) {
+                        toast(err.message || 'Failed to add profile', 'error')
+                      }
                     }}
                   />
                   </div>
