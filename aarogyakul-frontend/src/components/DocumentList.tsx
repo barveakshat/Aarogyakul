@@ -9,26 +9,26 @@ export function DocumentList({ documents, memberId }: { documents: DocumentSumma
       <EmptyState
         title="No documents yet"
         description="Upload a PDF report to start the AI Report Reader pipeline and build this member's medical timeline."
-        action={<Link className="inline-flex rounded-btn bg-gradient-to-r from-pri to-pri2 px-4 py-2 text-sm font-bold text-white shadow-glow" to={`/member/${memberId}/upload`}>Upload report</Link>}
+        action={<Link className="inline-flex rounded-md bg-focus px-4 py-2 text-sm font-semibold text-white" to={`/member/${memberId}/upload`}>Upload report</Link>}
       />
     )
   }
 
   return (
     <Card className="overflow-hidden">
-      <div className="border-b border-brd px-5 py-4">
-        <h2 className="text-base font-black text-txtP">Documents</h2>
+      <div className="border-b border-line px-5 py-4">
+        <h2 className="font-display text-base font-semibold text-deep">Documents</h2>
       </div>
-      <div className="divide-y divide-brd">
+      <div className="divide-y divide-line">
         {documents.map((doc) => (
-          <Link key={doc.documentId} to={`/member/${memberId}/upload?document=${doc.documentId}`} className="block px-5 py-4 transition-colors duration-200 hover:bg-mint/25">
+          <Link key={doc.documentId} to={`/member/${memberId}/upload?document=${doc.documentId}`} className="block px-5 py-4 transition-colors duration-150 hover:bg-bg">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="min-w-0">
-                <div className="truncate text-sm font-semibold text-txtP">{doc.fileName}</div>
-                <div className="mt-1 text-xs text-txtS">{documentTypeLabel(doc.documentType)} · Report date {formatDate(doc.reportDate)}</div>
+                <div className="truncate text-sm font-medium text-deep">{doc.fileName}</div>
+                <div className="mt-1 text-xs text-mid">{documentTypeLabel(doc.documentType)}, report date {formatDate(doc.reportDate)}</div>
               </div>
               <div className="flex shrink-0 items-center gap-3">
-                <span className="text-xs text-txtS">{formatDateTime(doc.uploadedAt)}</span>
+                <span className="text-xs text-mid">{formatDateTime(doc.uploadedAt)}</span>
                 <StatusBadge status={doc.processingStatus} />
               </div>
             </div>

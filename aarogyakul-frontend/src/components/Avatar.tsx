@@ -22,18 +22,18 @@ export function Avatar({ name, photoUrl, size = 'md', className = '' }: AvatarPr
       <img
         src={photoUrl}
         alt={name}
-        className={`${box} rounded-full object-cover shadow-md flex-shrink-0 ${className}`}
+        className={`${box} rounded-full object-cover shadow-sm flex-shrink-0 ${className}`}
       />
     )
   }
 
   return (
     <div
-      className={`${box} ${text} rounded-full flex items-center justify-center font-black flex-shrink-0 select-none ${className}`}
+      className={`${box} ${text} rounded-full flex items-center justify-center font-semibold flex-shrink-0 select-none ${className}`}
       style={{
-        background: 'linear-gradient(135deg, rgba(99,102,241,0.18) 0%, rgba(139,92,246,0.18) 100%)',
-        color: '#6366F1',
-        border: '2px solid rgba(99,102,241,0.15)',
+        background: 'rgba(59, 95, 204, 0.1)',
+        color: '#3B5FCC',
+        border: '2px solid rgba(59, 95, 204, 0.15)',
       }}
       aria-label={name}
       title={name}

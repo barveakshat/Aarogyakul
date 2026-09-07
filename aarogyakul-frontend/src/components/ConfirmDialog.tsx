@@ -40,34 +40,34 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
     <ConfirmContext.Provider value={{ confirm }}>
       {children}
       {state?.visible && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fdIn" onClick={() => handleClose(false)}>
-          <div className="relative mx-4 w-full max-w-sm rounded-crd border border-brd bg-white p-6 shadow-glow" onClick={e => e.stopPropagation()}>
-            <button onClick={() => handleClose(false)} className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full text-txtS transition-colors hover:bg-brd/50 hover:text-txtP">
-              <X size={18} />
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-deep/50 animate-enter" onClick={() => handleClose(false)}>
+          <div className="relative mx-4 w-full max-w-sm rounded-md border border-line bg-surf p-6 shadow-lg" onClick={e => e.stopPropagation()}>
+            <button onClick={() => handleClose(false)} className="absolute right-3 top-3 flex h-7 w-7 items-center justify-center rounded-md text-mid transition-colors hover:bg-bg hover:text-deep">
+              <X size={16} />
             </button>
 
-            <div className={`mb-4 flex h-12 w-12 items-center justify-center rounded-xl ${
-              state.variant === 'danger' ? 'bg-red-50' : 'bg-pri/10'
+            <div className={`mb-4 flex h-10 w-10 items-center justify-center rounded-md ${
+              state.variant === 'danger' ? 'bg-alert/8' : 'bg-focus/8'
             }`}>
-              <AlertTriangle size={22} className={state.variant === 'danger' ? 'text-red-500' : 'text-pri'} />
+              <AlertTriangle size={20} className={state.variant === 'danger' ? 'text-alert' : 'text-focus'} />
             </div>
 
-            <h3 className="text-lg font-black text-txtP">{state.title}</h3>
-            <p className="mt-2 text-sm leading-relaxed text-txtS">{state.message}</p>
+            <h3 className="font-display text-base font-semibold text-deep">{state.title}</h3>
+            <p className="mt-2 text-sm leading-relaxed text-mid">{state.message}</p>
 
             <div className="mt-6 flex gap-3">
               <button
                 onClick={() => handleClose(false)}
-                className="flex-1 rounded-btn border border-brd bg-white px-4 py-2.5 text-sm font-bold text-txtP transition-colors hover:bg-brd/30"
+                className="flex-1 rounded-md border border-line bg-surf px-4 py-2 text-sm font-semibold text-deep transition-colors hover:bg-bg"
               >
                 {state.cancelLabel || 'Cancel'}
               </button>
               <button
                 onClick={() => handleClose(true)}
-                className={`flex-1 rounded-btn px-4 py-2.5 text-sm font-bold text-white transition-colors ${
+                className={`flex-1 rounded-md px-4 py-2 text-sm font-semibold text-white transition-colors ${
                   state.variant === 'danger'
-                    ? 'bg-red-500 hover:bg-red-600'
-                    : 'bg-gradient-to-r from-pri to-pri2 hover:brightness-105'
+                    ? 'bg-alert hover:bg-alert/90'
+                    : 'bg-focus hover:bg-focus/90'
                 }`}
               >
                 {state.confirmLabel || 'Confirm'}

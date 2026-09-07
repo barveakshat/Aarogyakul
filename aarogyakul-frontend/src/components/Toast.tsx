@@ -55,29 +55,29 @@ const icons: Record<ToastType, typeof CheckCircle> = {
 }
 
 const styles: Record<ToastType, string> = {
-  success: 'border-emerald-200 bg-emerald-50 text-emerald-800',
-  error: 'border-red-200 bg-red-50 text-red-800',
-  warning: 'border-amber-200 bg-amber-50 text-amber-800',
-  info: 'border-blue-200 bg-blue-50 text-blue-800',
+  success: 'border-ok/20 bg-ok/[0.04] text-ok',
+  error: 'border-alert/20 bg-alert/[0.04] text-alert',
+  warning: 'border-attn/20 bg-attn/[0.04] text-attn',
+  info: 'border-focus/20 bg-focus/[0.04] text-focus',
 }
 
 const iconColors: Record<ToastType, string> = {
-  success: 'text-emerald-500',
-  error: 'text-red-500',
-  warning: 'text-amber-500',
-  info: 'text-blue-500',
+  success: 'text-ok',
+  error: 'text-alert',
+  warning: 'text-attn',
+  info: 'text-focus',
 }
 
 function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: (id: number) => void }) {
   const Icon = icons[toast.type]
   return (
     <div
-      className={`pointer-events-auto flex items-start gap-3 rounded-xl border px-4 py-3 shadow-lg backdrop-blur-sm animate-fdIn max-w-sm ${styles[toast.type]}`}
+      className={`pointer-events-auto flex items-start gap-3 rounded-md border bg-surf px-4 py-3 shadow-md animate-enter max-w-sm ${styles[toast.type]}`}
       role="alert"
     >
       <Icon size={18} className={`mt-0.5 shrink-0 ${iconColors[toast.type]}`} />
-      <p className="flex-1 text-sm font-medium leading-snug">{toast.message}</p>
-      <button onClick={() => onDismiss(toast.id)} className="shrink-0 rounded-full p-0.5 opacity-60 hover:opacity-100 transition-opacity">
+      <p className="flex-1 text-sm font-medium leading-snug text-deep">{toast.message}</p>
+      <button onClick={() => onDismiss(toast.id)} className="shrink-0 rounded-sm p-0.5 opacity-60 hover:opacity-100 transition-opacity">
         <X size={14} />
       </button>
     </div>

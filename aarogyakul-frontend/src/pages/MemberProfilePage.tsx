@@ -85,15 +85,15 @@ export default function MemberProfilePage() {
                 <button
                   type="button"
                   onClick={() => setShowPhotoModal(true)}
-                  className="absolute bottom-0 right-0 flex h-7 w-7 items-center justify-center rounded-full bg-pri text-white shadow-lg transition-all duration-200 hover:scale-110 hover:bg-sec"
+                  className="absolute bottom-0 right-0 flex h-7 w-7 items-center justify-center rounded-full bg-focus text-white shadow-md transition-all duration-200 hover:scale-110 hover:bg-focus/90"
                   title="Change photo"
                 >
                   <Pencil size={13} />
                 </button>
               </div>
               <div className="min-w-0">
-                <h2 className="text-xl font-black text-txtP">{member.fullName}</h2>
-                <p className="text-sm text-txtS">{member.relationshipToOwner || 'Family member'}</p>
+                <h2 className="font-display text-xl font-bold text-deep">{member.fullName}</h2>
+                <p className="text-sm text-mid">{member.relationshipToOwner || 'Family member'}</p>
               </div>
             </div>
             <dl className="mt-5 grid grid-cols-2 gap-4 text-sm">
@@ -105,7 +105,7 @@ export default function MemberProfilePage() {
           </Card>
 
           <Card className="p-5">
-            <h2 className="text-base font-black text-txtP">Edit profile</h2>
+            <h2 className="font-display text-base font-semibold text-deep">Edit profile</h2>
             <div className="mt-5">
               <MemberForm
                 initial={member}
@@ -115,7 +115,7 @@ export default function MemberProfilePage() {
                 }}
               />
             </div>
-            <div className="mt-5 border-t border-brd pt-5">
+            <div className="mt-5 border-t border-line pt-5">
               <Button variant="danger" onClick={handleDelete}>Delete member</Button>
             </div>
           </Card>
@@ -163,8 +163,8 @@ export default function MemberProfilePage() {
 function ProfileFact({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <dt className="text-xs font-medium uppercase tracking-wide text-txtS">{label}</dt>
-      <dd className="mt-1 font-medium text-txtP">{value}</dd>
+      <dt className="text-xs font-medium text-mid">{label}</dt>
+      <dd className="mt-1 font-medium text-deep">{value}</dd>
     </div>
   )
 }
@@ -222,28 +222,28 @@ function PhotoUploadModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fdIn" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-enter" onClick={onClose}>
       <div
-        className="relative mx-4 w-full max-w-md rounded-crd border border-brd bg-white p-6 shadow-glow"
+        className="relative mx-4 w-full max-w-md rounded-md border border-line bg-surf p-6 shadow-md"
         onClick={(e) => e.stopPropagation()}
       >
         <button
           onClick={onClose}
-          className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full text-txtS transition-colors hover:bg-brd/50 hover:text-txtP"
+          className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full text-mid transition-colors hover:bg-line/50 hover:text-deep"
         >
           <X size={18} />
         </button>
 
-        <h3 className="text-lg font-black text-txtP">Update profile photo</h3>
-        <p className="mt-1 text-sm text-txtS">Upload a new photo for {memberName}</p>
+        <h3 className="font-display text-base font-semibold text-deep">Update profile photo</h3>
+        <p className="mt-1 text-sm text-mid">Upload a new photo for {memberName}</p>
 
         <div
-          className={`mt-5 flex flex-col items-center justify-center rounded-2xl border-2 border-dashed p-8 transition-colors duration-200 ${
+          className={`mt-5 flex flex-col items-center justify-center rounded-md border-2 border-dashed p-8 transition-colors duration-150 ${
             dragActive
-              ? 'border-pri bg-pri/5'
+              ? 'border-focus bg-focus/8'
               : preview
-                ? 'border-brd bg-white'
-                : 'border-brd bg-slate-50/50 hover:border-pri/50 hover:bg-pri/[0.02]'
+                ? 'border-line bg-surf'
+                : 'border-line bg-bg hover:border-focus/50 hover:bg-focus/[0.02]'
           }`}
           onDragOver={(e) => { e.preventDefault(); setDragActive(true) }}
           onDragLeave={() => setDragActive(false)}
@@ -251,10 +251,10 @@ function PhotoUploadModal({
         >
           {preview ? (
             <div className="flex flex-col items-center gap-4">
-              <img src={preview} alt="Preview" className="h-28 w-28 rounded-full object-cover shadow-crd" />
+              <img src={preview} alt="Preview" className="h-28 w-28 rounded-full object-cover shadow-md" />
               <button
                 type="button"
-                className="text-sm font-semibold text-pri hover:underline"
+                className="text-sm font-semibold text-focus hover:underline"
                 onClick={() => { setPreview(null); setFile(null) }}
               >
                 Choose different image
@@ -262,14 +262,14 @@ function PhotoUploadModal({
             </div>
           ) : (
             <>
-              <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-pri/10">
-                <ImagePlus size={26} className="text-pri" />
+              <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-md bg-focus/8">
+                <ImagePlus size={26} className="text-focus" />
               </div>
-              <p className="text-sm font-semibold text-txtP">Drag & drop an image here</p>
-              <p className="mt-1 text-xs text-txtS">or click to browse · JPG, PNG up to 5 MB</p>
+              <p className="text-sm font-semibold text-deep">Drag & drop an image here</p>
+              <p className="mt-1 text-xs text-mid">or click to browse · JPG, PNG up to 5 MB</p>
               <button
                 type="button"
-                className="mt-4 rounded-btn border border-brd bg-white px-4 py-2 text-sm font-bold text-pri transition-colors hover:border-pri hover:bg-pri/5"
+                className="mt-4 rounded-md border border-line bg-surf px-4 py-2 text-sm font-semibold text-focus transition-colors hover:border-focus hover:bg-focus/8"
                 onClick={() => inputRef.current?.click()}
               >
                 Browse files
@@ -285,7 +285,7 @@ function PhotoUploadModal({
           />
         </div>
 
-        {error && <p className="mt-3 text-sm font-medium text-crit">{error}</p>}
+        {error && <p className="mt-3 text-sm font-medium text-alert">{error}</p>}
 
         <div className="mt-5 flex gap-3">
           <Button variant="secondary" className="flex-1" onClick={onClose} disabled={uploading}>Cancel</Button>
@@ -314,21 +314,21 @@ function ClinicalList({
 }) {
   return (
     <Card className="p-5">
-      <h2 className="text-base font-black text-txtP">{title}</h2>
+      <h2 className="font-display text-base font-semibold text-deep">{title}</h2>
       <div className="mt-4 space-y-3">
-        {items.length === 0 ? <p className="rounded-2xl bg-mint/40 px-3 py-2 text-sm text-txtS">{empty}</p> : null}
+        {items.length === 0 ? <p className="rounded-md bg-bg px-3 py-2 text-sm text-mid">{empty}</p> : null}
         {items.map((item) => (
-          <div key={item.id} className="flex items-start justify-between gap-3 rounded-2xl border border-brd bg-white/70 px-3 py-2">
+          <div key={item.id} className="flex items-start justify-between gap-3 rounded-md border border-line bg-surf px-3 py-2">
             <div>
-              <div className="text-sm font-medium text-txtP">{item.title}</div>
-              {item.meta ? <div className="mt-0.5 text-xs text-txtS">{item.meta}</div> : null}
-              {item.notes ? <p className="mt-1 text-sm text-txtS">{item.notes}</p> : null}
+              <div className="text-sm font-medium text-deep">{item.title}</div>
+              {item.meta ? <div className="mt-0.5 text-xs text-mid">{item.meta}</div> : null}
+              {item.notes ? <p className="mt-1 text-sm text-mid">{item.notes}</p> : null}
             </div>
             <Button variant="ghost" className="px-2 py-1" onClick={() => void onDelete(item.id)}>Remove</Button>
           </div>
         ))}
       </div>
-      <div className="mt-5 border-t border-brd pt-5">{form}</div>
+      <div className="mt-5 border-t border-line pt-5">{form}</div>
     </Card>
   )
 }

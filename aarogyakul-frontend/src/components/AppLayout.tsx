@@ -46,76 +46,74 @@ export function AppLayout() {
   }
 
   return (
-    <div className="h-screen w-full flex flex-col md:flex-row overflow-hidden bg-bg text-txtP">
+    <div className="h-screen w-full flex flex-col md:flex-row overflow-hidden bg-bg text-deep">
       {/* ─── DESKTOP SIDEBAR (hidden on mobile) ─── */}
-      <aside className="hidden md:flex w-64 flex-shrink-0 bg-sbBg flex-col">
-        <div className="h-16 flex items-center px-6 border-b border-white/5">
-          <div className="flex items-center gap-3">
-            <img src="/logo.svg" alt="AarogyaKul" className="h-8 w-8 shrink-0 rounded-xl object-contain" />
-            <span className="min-w-0">
-              <span className="block text-base font-black tracking-tight text-white">AarogyaKul</span>
-            </span>
+      <aside className="hidden md:flex w-60 flex-shrink-0 bg-sbBg flex-col">
+        <div className="h-14 flex items-center px-5 border-b border-white/10">
+          <div className="flex items-center gap-2.5">
+            <img src="/logo.svg" alt="AarogyaKul" className="h-7 w-7 shrink-0 rounded-md object-contain" />
+            <span className="text-sm font-bold tracking-tight text-white">AarogyaKul</span>
           </div>
         </div>
 
         {activeProfile && (
-          <div className="px-4 py-4 border-b border-white/5">
-            <div className="flex items-center gap-3">
-              <Avatar name={activeProfile.fullName} photoUrl={activeProfile.profilePhotoUrl} size="md" />
+          <div className="px-4 py-3 border-b border-white/10">
+            <div className="flex items-center gap-2.5">
+              <Avatar name={activeProfile.fullName} photoUrl={activeProfile.profilePhotoUrl} size="sm" />
               <div className="min-w-0 flex-1">
-                <div className="truncate text-sm font-semibold text-white">{activeProfile.fullName}</div>
-                <div className="truncate text-xs text-sbT">{activeProfile.relationshipToOwner || 'Member'}</div>
+                <div className="truncate text-sm font-medium text-white">{activeProfile.fullName}</div>
+                <div className="truncate text-xs text-sbTxt">{activeProfile.relationshipToOwner || 'Member'}</div>
               </div>
               <button
                 onClick={handleSwitchProfile}
-                className="shrink-0 flex h-8 w-8 items-center justify-center rounded-lg text-sbT hover:text-white hover:bg-white/10 transition-all duration-200"
+                className="shrink-0 flex h-7 w-7 items-center justify-center rounded-md text-sbTxt hover:text-white hover:bg-sbHov transition-colors duration-150"
                 title="Switch profile"
               >
-                <ArrowLeftRight size={16} />
+                <ArrowLeftRight size={14} />
               </button>
             </div>
           </div>
         )}
         
-        <nav className="flex-1 overflow-y-auto py-4">
-          <div className="space-y-1">
+        <nav className="flex-1 overflow-y-auto py-3">
+          <div className="space-y-0.5">
             {navItems.map((item) => (
               <NavLink
                 key={item.to}
                 to={item.to}
                 end={item.end}
                 className={({ isActive }) =>
-                  `flex items-center gap-3 px-4 py-3 mx-2 my-1 rounded-xl text-sm font-medium cursor-pointer transition-all duration-300 ${
+                  `flex items-center gap-3 px-4 py-2 mx-2 rounded-md text-sm font-medium transition-colors duration-150 ${
                     isActive 
-                      ? 'text-white bg-gradient-to-r from-pri/20 to-transparent border-l-4 border-pri shadow-[inset_0_0_20px_rgba(99,102,241,0.1)]' 
-                      : 'text-sbT hover:text-white hover:bg-white/5'
+                      ? 'text-white bg-sbAct border-l-[3px] border-focus' 
+                      : 'text-sbTxt hover:text-white hover:bg-sbHov'
                   }`
                 }
               >
-                <item.icon className="w-5 h-5" />
+                <item.icon className="w-[18px] h-[18px]" />
                 <span>{item.label}</span>
               </NavLink>
             ))}
           </div>
         </nav>
 
-        <div className="border-t border-white/5 p-4 space-y-2">
+        <div className="border-t border-white/10 p-3 space-y-0.5">
           <NavLink
             to="/app/profile"
             className={({ isActive }) =>
-              `flex items-center gap-3 px-4 py-2.5 mx-2 rounded-xl text-sm font-medium transition-all duration-300 ${
-                isActive ? 'text-white bg-white/10' : 'text-sbT hover:text-white hover:bg-white/5'
+              `flex items-center gap-3 px-4 py-2 mx-2 rounded-md text-sm font-medium transition-colors duration-150 ${
+                isActive ? 'text-white bg-sbHov' : 'text-sbTxt hover:text-white hover:bg-sbHov'
               }`
             }
           >
-            <UserCog className="w-5 h-5" />
-            <span>Edit Profile</span>
+            <UserCog className="w-[18px] h-[18px]" />
+            <span>Edit profile</span>
           </NavLink>
           <button 
             onClick={handleLogout}
-            className="flex w-full items-center gap-3 px-4 py-2.5 mx-2 rounded-xl text-sm font-medium text-sbT hover:text-white hover:bg-white/5 transition-all duration-300"
+            className="flex w-full items-center gap-3 px-4 py-2 mx-2 rounded-md text-sm font-medium text-sbTxt hover:text-white hover:bg-sbHov transition-colors duration-150"
           >
-            <LogOut className="w-5 h-5" />
+            <LogOut className="w-[18px] h-[18px]" />
             <span>Sign out</span>
           </button>
         </div>
@@ -123,61 +121,61 @@ export function AppLayout() {
 
       {/* ─── MAIN CONTENT AREA ─── */}
       <main className="flex-1 flex flex-col min-w-0">
-        <header className="h-14 md:h-16 px-4 md:px-8 flex items-center justify-between border-b border-brd bg-bg shrink-0">
-          <div className="flex items-center gap-3 md:hidden">
-            <img src="/logo.svg" alt="AarogyaKul" className="h-7 w-7 rounded-lg object-contain" />
-            <h2 className="text-base font-bold text-txtP tracking-tight">{pageTitle}</h2>
+        <header className="h-12 md:h-14 px-4 md:px-8 flex items-center justify-between border-b border-line bg-surf shrink-0">
+          <div className="flex items-center gap-2.5 md:hidden">
+            <img src="/logo.svg" alt="AarogyaKul" className="h-6 w-6 rounded-md object-contain" />
+            <h2 className="text-sm font-semibold text-deep">{pageTitle}</h2>
           </div>
-          <h2 className="text-lg font-bold text-txtP tracking-tight hidden md:block">{pageTitle}</h2>
+          <h2 className="text-sm font-semibold text-deep hidden md:block">{pageTitle}</h2>
 
           {/* Mobile menu button */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden flex items-center justify-center h-9 w-9 rounded-xl text-txtS hover:bg-brd/30 transition-colors"
+            className="md:hidden flex items-center justify-center h-8 w-8 rounded-md text-mid hover:bg-bg transition-colors"
           >
-            {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+            {mobileMenuOpen ? <X size={18} /> : <Menu size={18} />}
           </button>
         </header>
 
         {/* ─── MOBILE SLIDE-DOWN MENU ─── */}
         {mobileMenuOpen && (
-          <div className="md:hidden bg-sbBg border-b border-white/10 animate-fdIn">
-            <div className="p-4 space-y-2">
+          <div className="md:hidden bg-sbBg border-b border-white/10 animate-enter">
+            <div className="p-4 space-y-1">
               {activeProfile && (
-                <div className="flex items-center gap-3 mb-3 pb-3 border-b border-white/10">
+                <div className="flex items-center gap-2.5 mb-3 pb-3 border-b border-white/10">
                   <Avatar name={activeProfile.fullName} photoUrl={activeProfile.profilePhotoUrl} size="sm" />
                   <div className="flex-1 min-w-0">
-                    <div className="truncate text-sm font-semibold text-white">{activeProfile.fullName}</div>
+                    <div className="truncate text-sm font-medium text-white">{activeProfile.fullName}</div>
                   </div>
                   <button onClick={() => { handleSwitchProfile(); setMobileMenuOpen(false) }}
-                    className="shrink-0 flex h-8 w-8 items-center justify-center rounded-lg text-sbT hover:text-white hover:bg-white/10"
+                    className="shrink-0 flex h-7 w-7 items-center justify-center rounded-md text-sbTxt hover:text-white hover:bg-sbHov"
                     title="Switch profile"
                   >
-                    <ArrowLeftRight size={16} />
+                    <ArrowLeftRight size={14} />
                   </button>
                 </div>
               )}
               <NavLink to="/app/clinical" onClick={() => setMobileMenuOpen(false)}
-                className={({ isActive }) => `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium ${isActive ? 'text-white bg-white/10' : 'text-sbT hover:text-white'}`}
+                className={({ isActive }) => `flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium ${isActive ? 'text-white bg-sbAct' : 'text-sbTxt hover:text-white hover:bg-sbHov'}`}
               >
-                <Stethoscope className="w-5 h-5" /> Clinical Notes
+                <Stethoscope className="w-[18px] h-[18px]" /> Clinical Notes
               </NavLink>
               <NavLink to="/app/profile" onClick={() => setMobileMenuOpen(false)}
-                className={({ isActive }) => `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium ${isActive ? 'text-white bg-white/10' : 'text-sbT hover:text-white'}`}
+                className={({ isActive }) => `flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium ${isActive ? 'text-white bg-sbAct' : 'text-sbTxt hover:text-white hover:bg-sbHov'}`}
               >
-                <UserCog className="w-5 h-5" /> Edit Profile
+                <UserCog className="w-[18px] h-[18px]" /> Edit profile
               </NavLink>
               <button onClick={() => { handleLogout(); setMobileMenuOpen(false) }}
-                className="flex w-full items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-sbT hover:text-white"
+                className="flex w-full items-center gap-3 px-3 py-2 rounded-md text-sm font-medium text-sbTxt hover:text-white hover:bg-sbHov"
               >
-                <LogOut className="w-5 h-5" /> Sign Out
+                <LogOut className="w-[18px] h-[18px]" /> Sign out
               </button>
             </div>
           </div>
         )}
 
         <div className="flex-1 overflow-y-auto p-4 md:p-8 pb-20 md:pb-8 relative">
-          <div className="max-w-5xl mx-auto w-full">
+          <div className="max-w-4xl mx-auto w-full">
             <Outlet />
           </div>
         </div>
@@ -185,7 +183,7 @@ export function AppLayout() {
 
       {/* ─── MOBILE BOTTOM NAVIGATION (hidden on desktop) ─── */}
       <nav className="md:hidden fixed bottom-0 inset-x-0 bg-sbBg border-t border-white/10 z-40">
-        <div className="flex items-center justify-around h-16 px-2">
+        <div className="flex items-center justify-around h-14 px-2">
           {bottomNavItems.map((item) => (
             <NavLink
               key={item.to}
@@ -193,12 +191,12 @@ export function AppLayout() {
               end={item.end}
               onClick={() => setMobileMenuOpen(false)}
               className={({ isActive }) =>
-                `flex flex-col items-center justify-center gap-1 py-1 px-3 rounded-xl transition-all duration-200 ${
-                  isActive ? 'text-pri' : 'text-sbT hover:text-white'
+                `flex flex-col items-center justify-center gap-1 py-1 px-3 rounded-md transition-colors duration-150 ${
+                  isActive ? 'text-white' : 'text-sbTxt hover:text-white'
                 }`
               }
             >
-              <item.icon className="w-5 h-5" />
+              <item.icon className="w-[18px] h-[18px]" />
               <span className="text-[10px] font-medium">{item.label.split(' ')[0]}</span>
             </NavLink>
           ))}

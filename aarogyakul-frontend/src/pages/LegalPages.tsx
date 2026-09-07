@@ -69,11 +69,11 @@ export function TermsPage() {
 function LegalShell({ title, updated, children }: { title: string; updated: string; children: React.ReactNode }) {
   return (
     <div className="mx-auto max-w-3xl px-4 py-12">
-      <Link to="/" className="mb-6 inline-flex items-center gap-1.5 text-sm font-medium text-pri hover:underline">
+      <Link to="/" className="mb-6 inline-flex items-center gap-1.5 text-sm font-medium text-focus hover:underline">
         <ArrowLeft size={16} />Back to Home
       </Link>
-      <h1 className="text-3xl font-black text-txtP">{title}</h1>
-      <p className="mt-2 text-sm text-txtS">Last updated: {updated}</p>
+      <h1 className="font-display text-2xl font-bold tracking-tight text-deep">{title}</h1>
+      <p className="mt-2 text-sm text-mid">Last updated: {updated}</p>
       <div className="mt-8 space-y-8">{children}</div>
     </div>
   )
@@ -82,8 +82,8 @@ function LegalShell({ title, updated, children }: { title: string; updated: stri
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section>
-      <h2 className="mb-3 text-lg font-bold text-txtP">{title}</h2>
-      <div className="space-y-3 text-sm leading-relaxed text-txtS [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:space-y-1.5 [&_strong]:text-txtP">
+      <h2 className="mb-3 font-display text-lg font-semibold text-deep">{title}</h2>
+      <div className="space-y-3 text-sm leading-relaxed text-mid [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:space-y-1.5 [&_strong]:text-deep">
         {children}
       </div>
     </section>

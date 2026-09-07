@@ -55,7 +55,7 @@ export default function DashboardPage() {
 
       <div className="mb-6 grid gap-4 md:grid-cols-4">
         <StatCard label="Documents" value={documents.length} />
-        <StatCard label="Timeline Events" value={timeline.length} />
+        <StatCard label="Timeline events" value={timeline.length} />
         <StatCard label="Allergies" value={activeProfile.allergies.length} />
         <StatCard label="Conditions" value={activeProfile.chronicConditions.length} />
       </div>
@@ -64,22 +64,16 @@ export default function DashboardPage() {
         <Card className="mb-6 p-5">
           <div className="mb-1 flex items-center justify-between">
             <div>
-              <h2 className="text-base font-black text-txtP">{trend.parameterName} Trend</h2>
-              <p className="text-sm text-txtS">Your latest tracked parameter over time</p>
+              <h2 className="font-display text-base font-semibold text-deep">{trend.parameterName} Trend</h2>
+              <p className="text-sm text-mid">Your latest tracked parameter over time</p>
             </div>
-            <Link to="/app/trends" className="inline-flex items-center gap-1.5 text-sm font-bold text-pri hover:underline">
+            <Link to="/app/trends" className="inline-flex items-center gap-1.5 text-sm font-semibold text-focus hover:underline">
               <TrendingUp size={14} />View all trends
             </Link>
           </div>
           <div className="mt-4 h-52 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={chartData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="dashGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#6366F1" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#6366F1" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
                 <XAxis dataKey="date" tick={{ fontSize: 12, fill: '#64748B' }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fontSize: 12, fill: '#64748B' }} axisLine={false} tickLine={false} />
@@ -88,7 +82,7 @@ export default function DashboardPage() {
                   labelStyle={{ color: '#94A3B8' }}
                   formatter={(value: number) => [`${value} ${trend.unit}`, trend.parameterName]}
                 />
-                <Area type="monotone" dataKey="value" stroke="#6366F1" strokeWidth={2.5} fill="url(#dashGrad)" />
+                <Area type="monotone" dataKey="value" stroke="#3B5FCC" strokeWidth={2.5} fill="#3B5FCC" fillOpacity={0.1} />
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -104,20 +98,20 @@ export default function DashboardPage() {
       <div className="grid gap-6 lg:grid-cols-2">
         <Card className="p-5">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-base font-black text-txtP">Recent Documents</h2>
-            <Link to="/app/vault" className="text-sm font-bold text-pri hover:underline">View all</Link>
+            <h2 className="font-display text-base font-semibold text-deep">Recent Documents</h2>
+            <Link to="/app/vault" className="text-sm font-semibold text-focus hover:underline">View all</Link>
           </div>
           {recentDocs.length === 0 ? (
-            <p className="text-sm text-txtS py-4">No documents uploaded yet.</p>
+            <p className="text-sm text-mid py-4">No documents uploaded yet.</p>
           ) : (
             <div className="space-y-3">
               {recentDocs.map((doc) => (
-                <Link key={doc.documentId} to={`/app/insights?document=${doc.documentId}`} className="flex items-center justify-between rounded-xl border border-brd bg-white/70 px-3 py-2.5 hover:border-pri/30 transition-colors">
+                <Link key={doc.documentId} to={`/app/insights?document=${doc.documentId}`} className="flex items-center justify-between rounded-md border border-line bg-white/70 px-3 py-2.5 hover:border-focus/30 transition-colors">
                   <div className="min-w-0">
-                    <div className="truncate text-sm font-medium text-txtP">{doc.fileName}</div>
-                    <div className="text-xs text-txtS">{documentTypeLabel(doc.documentType)}</div>
+                    <div className="truncate text-sm font-medium text-deep">{doc.fileName}</div>
+                    <div className="text-xs text-mid">{documentTypeLabel(doc.documentType)}</div>
                   </div>
-                  <span className="shrink-0 text-xs text-txtS">{formatDateTime(doc.uploadedAt)}</span>
+                  <span className="shrink-0 text-xs text-mid">{formatDateTime(doc.uploadedAt)}</span>
                 </Link>
               ))}
             </div>
@@ -126,20 +120,20 @@ export default function DashboardPage() {
 
         <Card className="p-5">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-base font-black text-txtP">Recent Timeline</h2>
-            <Link to="/app/timeline" className="text-sm font-bold text-pri hover:underline">View all</Link>
+            <h2 className="font-display text-base font-semibold text-deep">Recent Timeline</h2>
+            <Link to="/app/timeline" className="text-sm font-semibold text-focus hover:underline">View all</Link>
           </div>
           {recentEvents.length === 0 ? (
-            <p className="text-sm text-txtS py-4">No timeline events yet.</p>
+            <p className="text-sm text-mid py-4">No timeline events yet.</p>
           ) : (
             <div className="space-y-3">
               {recentEvents.map((event) => (
-                <div key={event.id} className="flex items-center justify-between rounded-xl border border-brd bg-white/70 px-3 py-2.5">
+                <div key={event.id} className="flex items-center justify-between rounded-md border border-line bg-white/70 px-3 py-2.5">
                   <div className="min-w-0">
-                    <div className="truncate text-sm font-medium text-txtP">{event.title}</div>
-                    <div className="text-xs text-txtS">{timelineEventLabel(event.eventType)}</div>
+                    <div className="truncate text-sm font-medium text-deep">{event.title}</div>
+                    <div className="text-xs text-mid">{timelineEventLabel(event.eventType)}</div>
                   </div>
-                  <span className="shrink-0 text-xs text-txtS">{formatDate(event.eventDate)}</span>
+                  <span className="shrink-0 text-xs text-mid">{formatDate(event.eventDate)}</span>
                 </div>
               ))}
             </div>
@@ -153,21 +147,21 @@ export default function DashboardPage() {
 function StatCard({ label, value }: { label: string; value: number }) {
   return (
     <Card className="p-5">
-      <div className="text-3xl font-black text-pri">{value}</div>
-      <div className="mt-1 text-xs font-bold uppercase tracking-[0.16em] text-txtS">{label}</div>
+      <div className="text-3xl font-bold text-focus">{value}</div>
+      <div className="mt-1 text-xs font-semibold text-mid">{label}</div>
     </Card>
   )
 }
 
 function QuickLink({ title, text, to, icon: Icon }: { title: string; text: string; to: string; icon: React.ComponentType<{ className?: string }> }) {
   return (
-    <Link to={to} className="block rounded-crd outline-none focus:ring-4 focus:ring-pri/10">
-      <Card className="h-full p-5 transition duration-200 hover:-translate-y-1 hover:shadow-glow">
-        <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-r from-pri/10 to-sec/10">
-          <Icon className="h-5 w-5 text-pri" />
+    <Link to={to} className="block rounded-md outline-none focus:ring-4 focus:ring-focus/8">
+      <Card className="h-full p-5 transition duration-200 hover:-translate-y-1 hover:shadow-md">
+        <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-md bg-focus/8">
+          <Icon className="h-5 w-5 text-focus" />
         </div>
-        <h2 className="text-base font-black text-txtP">{title}</h2>
-        <p className="mt-2 text-sm leading-6 text-txtS">{text}</p>
+        <h2 className="font-display text-base font-semibold text-deep">{title}</h2>
+        <p className="mt-2 text-sm leading-6 text-mid">{text}</p>
       </Card>
     </Link>
   )

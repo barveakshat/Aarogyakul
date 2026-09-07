@@ -25,7 +25,6 @@ export default function ProfilePickerPage() {
     navigate('/app', { replace: true })
   }
 
-
   const handleCreateFamily = async (e: FormEvent) => {
     e.preventDefault()
     setCreating(true)
@@ -49,21 +48,21 @@ export default function ProfilePickerPage() {
       <div className="w-full max-w-3xl">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-3">
-            <img src="/logo.svg" alt="AarogyaKul" className="h-10 w-10 rounded-xl object-contain" />
-            <h1 className="text-2xl font-black tracking-tight text-txtP">Who's using AarogyaKul?</h1>
+            <img src="/logo.svg" alt="AarogyaKul" className="h-10 w-10 rounded-md object-contain" />
+            <h1 className="font-display text-2xl font-bold tracking-tight text-deep">Who's using AarogyaKul?</h1>
           </div>
-          <button onClick={handleLogout} className="flex items-center gap-2 rounded-btn px-4 py-2 text-sm font-medium text-txtS hover:text-txtP hover:bg-brd/30 transition-colors">
+          <button onClick={handleLogout} className="flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium text-mid hover:text-deep hover:bg-line/30 transition-colors">
             <LogOut size={16} />
             Sign out
           </button>
         </div>
-        <p className="text-sm text-txtS mb-10">Select your profile to view your health dashboard, documents, and timeline.</p>
+        <p className="text-sm text-mid mb-10">Select your profile to view your health dashboard, documents, and timeline.</p>
 
         {!family ? (
           <Card className="p-8 max-w-md mx-auto text-center">
             {showFamilyCreate ? (
               <form onSubmit={handleCreateFamily} className="space-y-4">
-                <h2 className="text-lg font-black text-txtP">Create your family workspace</h2>
+                <h2 className="font-display text-base font-semibold text-deep">Create your family workspace</h2>
                 <TextField label="Family name" value={familyName} placeholder={`${user?.fullName} Family`} onChange={(e) => setFamilyName(e.target.value)} />
                 <div className="flex gap-3">
                   <Button variant="secondary" type="button" onClick={() => setShowFamilyCreate(false)}>Cancel</Button>
@@ -72,8 +71,8 @@ export default function ProfilePickerPage() {
               </form>
             ) : (
               <>
-                <h2 className="text-lg font-black text-txtP">Welcome to AarogyaKul</h2>
-                <p className="mt-2 text-sm text-txtS">Create a family workspace to get started, then add profiles for each family member.</p>
+                <h2 className="font-display text-base font-semibold text-deep">Welcome to AarogyaKul</h2>
+                <p className="mt-2 text-sm text-mid">Create a family workspace to get started, then add profiles for each family member.</p>
                 <Button className="mt-6" onClick={() => setShowFamilyCreate(true)}>Create Family Workspace</Button>
               </>
             )}
@@ -85,7 +84,7 @@ export default function ProfilePickerPage() {
                 <button
                   key={member.memberId}
                   onClick={() => handleSelect(member)}
-                  className="group flex flex-col items-center gap-3 rounded-crd p-5 transition-all duration-300 hover:-translate-y-1 hover:shadow-glow hover:bg-white/80 focus:outline-none focus:ring-4 focus:ring-pri/20"
+                  className="group flex flex-col items-center gap-3 rounded-md p-5 transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:bg-surf focus:outline-none focus:ring-4 focus:ring-focus/20"
                 >
                   <Avatar
                     name={member.fullName}
@@ -93,28 +92,28 @@ export default function ProfilePickerPage() {
                     size="xl"
                     className="transition-transform duration-300 group-hover:scale-105"
                   />
-                  <span className="text-sm font-bold text-txtP group-hover:text-pri transition-colors">{member.fullName}</span>
-                  <span className="text-xs text-txtS">{member.relationshipToOwner || 'Member'}</span>
+                  <span className="text-sm font-semibold text-deep group-hover:text-focus transition-colors">{member.fullName}</span>
+                  <span className="text-xs text-mid">{member.relationshipToOwner || 'Member'}</span>
                 </button>
               ))}
 
               <button
                 onClick={() => setShowAddForm(true)}
-                className="flex flex-col items-center justify-center gap-3 rounded-crd border-2 border-dashed border-brd p-5 transition-all duration-300 hover:-translate-y-1 hover:border-pri/40 hover:bg-pri/[0.02] focus:outline-none focus:ring-4 focus:ring-pri/20"
+                className="flex flex-col items-center justify-center gap-3 rounded-md border-2 border-dashed border-line p-5 transition-all duration-300 hover:-translate-y-1 hover:border-focus/40 hover:bg-focus/[0.02] focus:outline-none focus:ring-4 focus:ring-focus/20"
               >
-                <div className="flex h-24 w-24 items-center justify-center rounded-full bg-brd/30">
-                  <Plus size={32} className="text-txtS" />
+                <div className="flex h-24 w-24 items-center justify-center rounded-full bg-line/30">
+                  <Plus size={32} className="text-mid" />
                 </div>
-                <span className="text-sm font-bold text-txtS">Add Profile</span>
+                <span className="text-sm font-semibold text-mid">Add Profile</span>
               </button>
             </div>
 
             {showAddForm && (
-              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fdIn" onClick={() => setShowAddForm(false)}>
-                <Card className="relative mx-4 w-full max-w-md p-6 shadow-glow" >
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-enter" onClick={() => setShowAddForm(false)}>
+                <Card className="relative mx-4 w-full max-w-md p-6 shadow-md" >
                   <div onClick={(e: React.MouseEvent) => e.stopPropagation()}>
-                  <h2 className="text-lg font-black text-txtP mb-1">Add family member</h2>
-                  <p className="text-sm text-txtS mb-5">Create a new profile in your family workspace.</p>
+                  <h2 className="font-display text-base font-semibold text-deep mb-1">Add family member</h2>
+                  <p className="text-sm text-mid mb-5">Create a new profile in your family workspace.</p>
                   <MemberForm
                     submitLabel="Add profile"
                     onSubmit={async (payload) => {

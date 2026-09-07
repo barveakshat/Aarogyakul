@@ -1,4 +1,5 @@
-import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode, SelectHTMLAttributes, TextareaHTMLAttributes } from 'react'
+import { useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react'
+import { Eye, EyeOff } from 'lucide-react'
 import type { ProcessingStatus } from '../types/api'
 import { statusLabel } from '../utils/format'
 
@@ -9,15 +10,15 @@ export function Button({
   ...props
 }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'primary' | 'secondary' | 'danger' | 'ghost' }) {
   const variants = {
-    primary: 'bg-gradient-to-r from-pri to-pri2 text-white border-transparent shadow-glow hover:brightness-105 focus:ring-pri/25',
-    secondary: 'bg-white/90 text-pri border-brd hover:border-pri hover:bg-mint/40 focus:ring-pri/20',
-    danger: 'bg-white text-crit border-red-200 hover:bg-red-50 focus:ring-red-200',
-    ghost: 'bg-transparent text-txtS border-transparent hover:bg-white/70 hover:text-pri focus:ring-pri/20',
+    primary: 'bg-focus text-white border-transparent hover:bg-focus/90 focus:ring-focus/20',
+    secondary: 'bg-surf text-focus border-line hover:bg-bg focus:ring-focus/15',
+    danger: 'bg-surf text-alert border-alert/30 hover:bg-alert/[0.04] focus:ring-alert/15',
+    ghost: 'bg-transparent text-mid border-transparent hover:bg-bg hover:text-deep focus:ring-focus/15',
   }
 
   return (
     <button
-      className={`inline-flex items-center justify-center gap-2 rounded-btn border px-4 py-2 text-sm font-bold transition duration-200 focus:outline-none focus:ring-4 disabled:cursor-not-allowed disabled:opacity-60 ${variants[variant]} ${className}`}
+      className={`inline-flex items-center justify-center gap-2 rounded-md border px-4 py-2 text-sm font-semibold transition duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${variants[variant]} ${className}`}
       {...props}
     >
       {children}
@@ -32,11 +33,42 @@ export function TextField({
 }: InputHTMLAttributes<HTMLInputElement> & { label: string }) {
   return (
     <label className="block">
-      <span className="mb-1.5 block text-sm font-semibold text-txtP">{label}</span>
+      <span className="mb-1.5 block text-xs font-medium text-deep">{label}</span>
       <input
-        className={`w-full rounded-2xl border border-brd bg-white/85 px-4 py-2.5 text-sm text-txtP outline-none transition duration-200 placeholder:text-emerald-900/35 focus:border-pri focus:bg-white focus:ring-4 focus:ring-pri/10 ${className}`}
+        className={`w-full rounded-md border border-line bg-surf px-3 py-2 text-sm text-deep outline-none transition duration-150 placeholder:text-soft focus:border-focus focus:ring-2 focus:ring-focus/15 ${className}`}
         {...props}
       />
+    </label>
+  )
+}
+
+export function PasswordField({
+  label,
+  className = '',
+  hint,
+  ...props
+}: InputHTMLAttributes<HTMLInputElement> & { label: string; hint?: string }) {
+  const [visible, setVisible] = useState(false)
+  return (
+    <label className="block">
+      <span className="mb-1.5 block text-xs font-medium text-deep">{label}</span>
+      <div className="relative">
+        <input
+          type={visible ? 'text' : 'password'}
+          className={`w-full rounded-md border border-line bg-surf py-2 pl-3 pr-9 text-sm text-deep outline-none transition duration-150 placeholder:text-soft focus:border-focus focus:ring-2 focus:ring-focus/15 ${className}`}
+          {...props}
+        />
+        <button
+          type="button"
+          tabIndex={-1}
+          onClick={() => setVisible(v => !v)}
+          className="absolute right-2 top-1/2 -translate-y-1/2 flex h-6 w-6 items-center justify-center rounded-sm text-mid transition-colors hover:text-deep"
+          aria-label={visible ? 'Hide password' : 'Show password'}
+        >
+          {visible ? <EyeOff size={15} /> : <Eye size={15} />}
+        </button>
+      </div>
+      {hint && <span className="mt-1 block text-[11px] text-mid">{hint}</span>}
     </label>
   )
 }
@@ -49,9 +81,9 @@ export function SelectField({
 }: SelectHTMLAttributes<HTMLSelectElement> & { label: string; children: ReactNode }) {
   return (
     <label className="block">
-      <span className="mb-1.5 block text-sm font-semibold text-txtP">{label}</span>
+      <span className="mb-1.5 block text-xs font-medium text-deep">{label}</span>
       <select
-        className={`w-full rounded-2xl border border-brd bg-white/85 px-4 py-2.5 text-sm text-txtP outline-none transition duration-200 focus:border-pri focus:bg-white focus:ring-4 focus:ring-pri/10 ${className}`}
+        className={`w-full rounded-md border border-line bg-surf px-3 py-2 text-sm text-deep outline-none transition duration-150 focus:border-focus focus:ring-2 focus:ring-focus/15 ${className}`}
         {...props}
       >
         {children}
@@ -67,9 +99,9 @@ export function TextAreaField({
 }: TextareaHTMLAttributes<HTMLTextAreaElement> & { label: string }) {
   return (
     <label className="block">
-      <span className="mb-1.5 block text-sm font-semibold text-txtP">{label}</span>
+      <span className="mb-1.5 block text-xs font-medium text-deep">{label}</span>
       <textarea
-        className={`min-h-24 w-full resize-y rounded-2xl border border-brd bg-white/85 px-4 py-2.5 text-sm text-txtP outline-none transition duration-200 placeholder:text-emerald-900/35 focus:border-pri focus:bg-white focus:ring-4 focus:ring-pri/10 ${className}`}
+        className={`min-h-24 w-full resize-y rounded-md border border-line bg-surf px-3 py-2 text-sm text-deep outline-none transition duration-150 placeholder:text-soft focus:border-focus focus:ring-2 focus:ring-focus/15 ${className}`}
         {...props}
       />
     </label>
@@ -77,7 +109,7 @@ export function TextAreaField({
 }
 
 export function Card({ children, className = '' }: { children: ReactNode; className?: string }) {
-  return <section className={`rounded-crd border border-white/70 bg-white/78 shadow-crd backdrop-blur ${className}`}>{children}</section>
+  return <section className={`rounded-md border border-line bg-surf shadow-md ${className}`}>{children}</section>
 }
 
 export function PageHeader({
@@ -92,8 +124,8 @@ export function PageHeader({
   return (
     <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
       <div>
-        <h1 className="text-3xl font-black tracking-tight text-txtP">{title}</h1>
-        {description ? <p className="mt-1 max-w-2xl text-sm leading-6 text-txtS">{description}</p> : null}
+        <h1 className="font-display text-2xl font-bold tracking-tight text-deep">{title}</h1>
+        {description ? <p className="mt-1 max-w-2xl text-sm leading-6 text-mid">{description}</p> : null}
       </div>
       {action ? <div className="shrink-0">{action}</div> : null}
     </div>
@@ -110,12 +142,12 @@ export function EmptyState({
   action?: ReactNode
 }) {
   return (
-    <div className="rounded-crd border border-dashed border-emerald-200 bg-white/70 px-6 py-10 text-center shadow-crd">
-      <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-mint to-emerald-100 text-sm font-black text-pri">
+    <div className="rounded-md border border-dashed border-line bg-surf px-6 py-12 text-center">
+      <div className="mx-auto mb-4 flex h-10 w-10 items-center justify-center rounded-md bg-focus/8 text-sm font-bold text-focus">
         AK
       </div>
-      <h2 className="text-base font-semibold text-txtP">{title}</h2>
-      <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-txtS">{description}</p>
+      <h2 className="text-sm font-semibold text-deep">{title}</h2>
+      <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-mid">{description}</p>
       {action ? <div className="mt-5">{action}</div> : null}
     </div>
   )
@@ -124,8 +156,8 @@ export function EmptyState({
 export function LoadingState({ label = 'Loading' }: { label?: string }) {
   return (
     <div className="flex min-h-72 items-center justify-center">
-      <div className="flex items-center gap-3 rounded-crd border border-brd bg-white/85 px-4 py-3 text-sm font-medium text-txtS shadow-crd">
-        <span className="h-4 w-4 animate-spin rounded-full border-2 border-brd border-t-pri" />
+      <div className="flex items-center gap-3 rounded-md border border-line bg-surf px-4 py-3 text-sm font-medium text-mid shadow-sm">
+        <span className="h-4 w-4 animate-spin rounded-full border-2 border-line border-t-focus" />
         {label}
       </div>
     </div>
@@ -133,20 +165,22 @@ export function LoadingState({ label = 'Loading' }: { label?: string }) {
 }
 
 export function Alert({ message, tone = 'danger' }: { message: string; tone?: 'danger' | 'info' }) {
-  const styles = tone === 'danger' ? 'border-red-200 bg-red-50 text-red-700' : 'border-teal-200 bg-teal-50 text-teal-800'
-  return <div className={`rounded-btn border px-3 py-2 text-sm ${styles}`}>{message}</div>
+  const styles = tone === 'danger'
+    ? 'border-alert/20 bg-alert/[0.04] text-alert'
+    : 'border-focus/20 bg-focus/[0.04] text-focus'
+  return <div className={`rounded-md border px-3 py-2 text-sm ${styles}`}>{message}</div>
 }
 
 export function StatusBadge({ status }: { status: ProcessingStatus }) {
   const styles: Record<ProcessingStatus, string> = {
-    PENDING: 'border-teal-100 bg-teal-50 text-teal-700',
-    PROCESSING: 'border-amber-200 bg-amber-50 text-amber-700',
-    COMPLETED: 'border-emerald-200 bg-emerald-50 text-emerald-700',
-    FAILED: 'border-red-200 bg-red-50 text-red-700',
+    PENDING: 'border-mid/15 bg-mid/8 text-mid',
+    PROCESSING: 'border-focus/15 bg-focus/8 text-focus',
+    COMPLETED: 'border-ok/15 bg-ok/8 text-ok',
+    FAILED: 'border-alert/15 bg-alert/8 text-alert',
   }
 
   return (
-    <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium ${styles[status]}`}>
+    <span className={`inline-flex items-center rounded-sm border px-2 py-0.5 text-[11px] font-medium ${styles[status]}`}>
       {statusLabel(status)}
     </span>
   )

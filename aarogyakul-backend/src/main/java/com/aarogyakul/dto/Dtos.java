@@ -15,12 +15,34 @@ public final class Dtos {
     /** Generic paginated response envelope for list endpoints. */
     public record PaginatedResponse<T>(List<T> data, int page, int totalPages, long totalElements, boolean hasMore) {}
 
-    public record RegisterRequest(@Email @NotBlank String email, @Size(min = 8) String password,
-                                  @NotBlank String fullName, String phoneNumber) {}
-    public record LoginRequest(@Email @NotBlank String email, @NotBlank String password) {}
+    public record RegisterRequest(
+            @Email(message = "Please enter a valid email address")
+            @NotBlank(message = "Email is required")
+            String email,
+            @NotBlank(message = "Password is required")
+            @Size(min = 8, message = "Password must be at least 8 characters")
+            String password,
+            @NotBlank(message = "Full name is required")
+            String fullName,
+            String phoneNumber) {}
+
+    public record LoginRequest(
+            @Email(message = "Please enter a valid email address")
+            @NotBlank(message = "Email is required")
+            String email,
+            @NotBlank(message = "Password is required")
+            String password) {}
+
     public record AuthResponse(UUID userId, String email, String fullName, String accessToken) {}
     public record AuthUserResponse(UUID userId, String email, String fullName, String accessToken) {}
-    public record ChangePasswordRequest(@NotBlank String currentPassword, @Size(min = 8) String newPassword) {}
+
+    public record ChangePasswordRequest(
+            @NotBlank(message = "Current password is required")
+            String currentPassword,
+            @NotBlank(message = "New password is required")
+            @Size(min = 8, message = "New password must be at least 8 characters")
+            String newPassword) {}
+
 
     public record CreateFamilyRequest(@NotBlank String familyName) {}
     public record FamilyResponse(UUID familyId, String familyName, UUID ownerId, OffsetDateTime createdAt,

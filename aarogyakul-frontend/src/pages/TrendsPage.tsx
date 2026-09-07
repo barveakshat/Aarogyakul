@@ -103,10 +103,10 @@ export default function TrendsPage() {
           {/* Summary cards */}
           <div className="mb-6 grid gap-4 md:grid-cols-3">
             <Card className="p-5">
-              <div className="text-xs font-bold uppercase tracking-[0.16em] text-txtS">Latest Value</div>
-              <div className="mt-2 text-3xl font-black text-pri">
+              <div className="text-xs font-bold text-mid">Latest value</div>
+              <div className="mt-2 text-3xl font-bold text-focus">
                 {latest?.value ?? '—'}
-                <span className="ml-1 text-base font-medium text-txtS">{trend.unit}</span>
+                <span className="ml-1 text-base font-medium text-mid">{trend.unit}</span>
               </div>
               {isInRange !== null && (
                 <div className={`mt-2 inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-bold ${
@@ -120,17 +120,17 @@ export default function TrendsPage() {
               )}
             </Card>
             <Card className="p-5">
-              <div className="text-xs font-bold uppercase tracking-[0.16em] text-txtS">Readings</div>
-              <div className="mt-2 text-3xl font-black text-pri">{chartData.length}</div>
-              <div className="mt-2 text-xs text-txtS">data points tracked</div>
+              <div className="text-xs font-bold text-mid">Readings</div>
+              <div className="mt-2 text-3xl font-bold text-focus">{chartData.length}</div>
+              <div className="mt-2 text-xs text-mid">data points tracked</div>
             </Card>
             {refLow !== undefined && refHigh !== undefined && (
               <Card className="p-5">
-                <div className="text-xs font-bold uppercase tracking-[0.16em] text-txtS">Reference Range</div>
-                <div className="mt-2 text-3xl font-black text-pri">
+                <div className="text-xs font-bold text-mid">Reference range</div>
+                <div className="mt-2 text-3xl font-bold text-focus">
                   {refLow} – {refHigh}
                 </div>
-                <div className="mt-2 text-xs text-txtS">{trend.unit}</div>
+                <div className="mt-2 text-xs text-mid">{trend.unit}</div>
               </Card>
             )}
           </div>
@@ -138,19 +138,13 @@ export default function TrendsPage() {
           {/* Trend chart */}
           <Card className="p-5">
             <div className="mb-4 flex items-center gap-2">
-              <TrendingUp className="h-5 w-5 text-pri" />
-              <h2 className="text-base font-black text-txtP">{trend.parameterName} Trend</h2>
+              <TrendingUp className="h-5 w-5 text-focus" />
+              <h2 className="font-display text-base font-semibold text-deep">{trend.parameterName} Trend</h2>
             </div>
             <div className="h-72 w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={chartData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="trendGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#6366F1" stopOpacity={0.15} />
-                      <stop offset="95%" stopColor="#6366F1" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#DDE5E9" strokeOpacity={0.5} />
                   <XAxis
                     dataKey="date"
                     tick={{ fontSize: 11, fill: '#64748B' }}
@@ -179,34 +173,34 @@ export default function TrendsPage() {
 
                   {/* Reference range band */}
                   {refLow !== undefined && refHigh !== undefined && (
-                    <ReferenceArea y1={refLow} y2={refHigh} fill="#10B981" fillOpacity={0.08} strokeOpacity={0} />
+                    <ReferenceArea y1={refLow} y2={refHigh} fill="#1A7A4C" fillOpacity={0.06} strokeOpacity={0} />
                   )}
                   {refLow !== undefined && (
-                    <ReferenceLine y={refLow} stroke="#10B981" strokeDasharray="4 4" strokeWidth={1} />
+                    <ReferenceLine y={refLow} stroke="#1A7A4C" strokeDasharray="4 4" strokeWidth={1} />
                   )}
                   {refHigh !== undefined && (
-                    <ReferenceLine y={refHigh} stroke="#10B981" strokeDasharray="4 4" strokeWidth={1} />
+                    <ReferenceLine y={refHigh} stroke="#1A7A4C" strokeDasharray="4 4" strokeWidth={1} />
                   )}
 
                   <Line
                     type="monotone"
                     dataKey="value"
-                    stroke="#6366F1"
+                    stroke="#3B5FCC"
                     strokeWidth={2.5}
-                    dot={{ fill: '#6366F1', r: 4, strokeWidth: 2, stroke: '#fff' }}
-                    activeDot={{ r: 6, fill: '#6366F1', stroke: '#fff', strokeWidth: 3 }}
+                    dot={{ fill: '#3B5FCC', r: 4, strokeWidth: 2, stroke: '#fff' }}
+                    activeDot={{ r: 6, fill: '#3B5FCC', stroke: '#fff', strokeWidth: 3 }}
                   />
                 </LineChart>
               </ResponsiveContainer>
             </div>
             {refLow !== undefined && refHigh !== undefined && (
-              <div className="mt-4 flex items-center gap-4 text-xs text-txtS">
+              <div className="mt-4 flex items-center gap-4 text-xs text-mid">
                 <span className="flex items-center gap-1.5">
                   <span className="inline-block h-2 w-6 rounded-sm bg-emerald-100 border border-emerald-300" />
                   Normal range ({refLow}–{refHigh} {trend.unit})
                 </span>
                 <span className="flex items-center gap-1.5">
-                  <span className="inline-block h-0.5 w-6 bg-pri rounded" />
+                  <span className="inline-block h-0.5 w-6 bg-focus rounded" />
                   Your readings
                 </span>
               </div>

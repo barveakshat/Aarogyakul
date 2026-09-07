@@ -22,7 +22,15 @@ public class GlobalExceptionHandler {
     ResponseEntity<Map<String, Object>> validation(MethodArgumentNotValidException ex) {
         String message = ex.getBindingResult().getFieldErrors().stream()
                 .findFirst()
-                .map(e -> e.getField() + " " + e.getDefaultMessage())
+                .map(e -> {
+                    String msg = e.getDefaultMessage();
+                    // If the message already reads as a sentence, use it directly.
+                    // Otherwise, fall back to "field defaultMessage" for backwards compatibility.
+                    if (msg != null && (msg.contains(" ") && Character.isUpperCase(msg.charAt(0)))) {
+                        return msg;
+                    }
+                    return e.getField() + " " + msg;
+                })
                 .orElse("Invalid request");
         return ResponseEntity.badRequest().body(error("VALIDATION_ERROR", message));
     }

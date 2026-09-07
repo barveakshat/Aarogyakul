@@ -4,7 +4,7 @@ import { getDocument, listDocuments, uploadDocument } from '../api/documents'
 import { Alert, Button, Card, EmptyState, LoadingState, PageHeader, SelectField, StatusBadge } from '../components/ui'
 import type { DocumentResponse, DocumentSummaryResponse, DocumentType } from '../types/api'
 import { documentTypeLabel, formatDate, formatDateTime } from '../utils/format'
-import { Sparkles, Plus, X } from 'lucide-react'
+import { Plus, X } from 'lucide-react'
 import { useProfile } from '../context/ProfileContext'
 
 const maxPdfSize = 15 * 1024 * 1024
@@ -142,7 +142,7 @@ export default function UploadPage() {
         action={
           <button
             onClick={() => setShowUploadModal(true)}
-            className="inline-flex items-center gap-2 rounded-btn bg-gradient-to-r from-pri to-sec px-5 py-2.5 text-sm font-bold text-white shadow-glow transition-all hover:shadow-[0_0_30px_rgba(99,102,241,0.4)]"
+            className="inline-flex items-center gap-2 rounded-md bg-focus px-5 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
           >
             <Plus size={16} /> Upload
           </button>
@@ -152,9 +152,8 @@ export default function UploadPage() {
 
       {/* ─── PROCESSING STEPPER ─── */}
       {processingStage && processingStage.stage !== 'COMPLETED' && processingStage.stage !== 'FAILED' && (
-        <div className="mb-6 rounded-crd border border-pri/20 bg-pri/5 p-5">
-          <h4 className="text-sm font-bold text-txtP mb-4 flex items-center gap-2">
-            <Sparkles size={14} className="text-pri animate-pulse" />
+        <div className="mb-6 rounded-md border border-focus/20 bg-focus/5 p-5">
+          <h4 className="text-sm font-semibold text-deep mb-4">
             AI is analyzing your report...
           </h4>
           <div className="flex items-center gap-1">
@@ -165,41 +164,46 @@ export default function UploadPage() {
               return (
                 <div key={stage.key} className="flex-1 flex flex-col items-center gap-1.5">
                   <div className={`h-1.5 w-full rounded-full transition-all duration-500 ${
-                    isDone ? 'bg-norm' : isCurrent ? 'bg-pri animate-pulse' : 'bg-brd/40'
+                    isDone ? 'bg-ok' : isCurrent ? 'bg-focus' : 'bg-line'
                   }`} />
                   <span className={`text-[10px] font-medium text-center leading-tight ${
-                    isCurrent ? 'text-pri font-bold' : isDone ? 'text-norm' : 'text-txtS'
+                    isCurrent ? 'text-focus font-semibold' : isDone ? 'text-ok' : 'text-mid'
                   }`}>{stage.label}</span>
                 </div>
               )
             })}
           </div>
-          <p className="mt-3 text-xs text-txtS">{processingStage.message}</p>
+          <p className="mt-3 text-xs text-mid">{processingStage.message}</p>
         </div>
       )}
 
-      {/* Document cards grid */}
+      {/* Document list */}
       {documents.length === 0 ? (
         <EmptyState title="No documents yet" description="Click the + Upload button above to upload your first medical document." />
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 mb-6">
-          {documents.map((doc) => (
-            <button
-              key={doc.documentId}
-              onClick={() => setSearchParams({ document: doc.documentId })}
-              className={`block w-full text-left rounded-crd border bg-white p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-glow focus:outline-none focus:ring-4 focus:ring-pri/10 ${
-                selectedDocumentId === doc.documentId ? 'border-pri shadow-glow' : 'border-brd shadow-crd'
-              }`}
-            >
-              <div className="flex items-start justify-between gap-2 mb-2">
-                <h3 className="truncate text-sm font-bold text-txtP">{doc.fileName}</h3>
-                <StatusBadge status={doc.processingStatus} />
-              </div>
-              <p className="text-xs text-txtS">{documentTypeLabel(doc.documentType)}</p>
-              <p className="mt-1 text-xs text-txtS">{formatDateTime(doc.uploadedAt)}</p>
-            </button>
-          ))}
-        </div>
+        <Card className="mb-6 overflow-hidden">
+          <div className="divide-y divide-line">
+            {documents.map((doc) => (
+              <button
+                key={doc.documentId}
+                onClick={() => setSearchParams({ document: doc.documentId })}
+                className={`block w-full text-left p-4 transition-colors hover:bg-slate-50 focus:outline-none focus:bg-slate-50 ${
+                  selectedDocumentId === doc.documentId ? 'border-l-[3px] border-focus bg-focus/[0.03]' : 'border-l-[3px] border-transparent'
+                }`}
+              >
+                <div className="flex items-start justify-between gap-2 mb-1.5">
+                  <h3 className="truncate text-sm font-semibold text-deep">{doc.fileName}</h3>
+                  <StatusBadge status={doc.processingStatus} />
+                </div>
+                <div className="flex items-center gap-2 text-xs text-mid">
+                  <span>{documentTypeLabel(doc.documentType)}</span>
+                  <span>&middot;</span>
+                  <span>{formatDateTime(doc.uploadedAt)}</span>
+                </div>
+              </button>
+            ))}
+          </div>
+        </Card>
       )}
 
       {/* Selected document detail */}
@@ -207,30 +211,30 @@ export default function UploadPage() {
 
       {/* Upload Modal */}
       {showUploadModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fdIn" onClick={() => !uploading && setShowUploadModal(false)}>
-          <div className="relative mx-4 w-full max-w-md rounded-crd border border-brd bg-white p-6 shadow-glow" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-deep/50 animate-enter backdrop-blur-sm" onClick={() => !uploading && setShowUploadModal(false)}>
+          <div className="relative mx-4 w-full max-w-md rounded-md border border-line bg-surf p-6 shadow-lg" onClick={(e) => e.stopPropagation()}>
             <button
               onClick={() => !uploading && setShowUploadModal(false)}
-              className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full text-txtS transition-colors hover:bg-brd/50 hover:text-txtP"
+              className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full text-mid transition-colors hover:bg-line/50 hover:text-deep"
             >
               <X size={18} />
             </button>
-            <h3 className="text-lg font-black text-txtP">Upload document</h3>
-            <p className="mt-1 text-sm text-txtS">PDF only, max 15 MB. Blood & lab reports trigger AI analysis.</p>
+            <h3 className="text-lg font-semibold text-deep">Upload document</h3>
+            <p className="mt-1 text-sm text-mid">PDF only, max 15 MB. Blood & lab reports trigger AI analysis.</p>
             <form className="mt-5 space-y-4" onSubmit={async (e) => { await handleUpload(e); if (!error) setShowUploadModal(false) }}>
               <SelectField label="Document type" value={documentType} onChange={(event) => setDocumentType(event.target.value as DocumentType)}>
                 {documentTypes.map((type) => <option key={type} value={type}>{documentTypeLabel(type)}</option>)}
               </SelectField>
               <label className="block">
-                <span className="mb-1.5 block text-sm font-medium text-txtP">PDF file</span>
+                <span className="mb-1.5 block text-sm font-medium text-deep">PDF file</span>
                 <input
-                  className="block w-full rounded-2xl border border-brd bg-white/85 px-3 py-2 text-sm text-txtP file:mr-4 file:rounded-btn file:border-0 file:bg-gradient-to-r file:from-pri file:to-pri2 file:px-3 file:py-1.5 file:text-sm file:font-bold file:text-white"
+                  className="block w-full rounded-md border border-line bg-surf px-3 py-2 text-sm text-deep file:mr-4 file:rounded-md file:border-0 file:bg-focus file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-white"
                   type="file"
                   accept="application/pdf,.pdf"
                   onChange={(event) => setFile(event.target.files?.[0] || null)}
                 />
               </label>
-              <Button className="w-full" type="submit" disabled={uploading}>{uploading ? 'Uploading...' : 'Upload and process'}</Button>
+              <Button className="w-full !bg-focus !text-white" type="submit" disabled={uploading}>{uploading ? 'Uploading...' : 'Upload and process'}</Button>
             </form>
           </div>
         </div>
@@ -240,8 +244,6 @@ export default function UploadPage() {
 }
 
 function DocumentDetail({ document }: { document: DocumentResponse }) {
-  const [showRawSummary, setShowRawSummary] = useState(false)
-
   const summaryText = document.insight?.summaryText || ''
 
   // Categorize parameters by status
@@ -263,9 +265,9 @@ function DocumentDetail({ document }: { document: DocumentResponse }) {
     anomalies.length <= 2 ? 'attention' : 'concerning'
 
   const statusConfig = {
-    'all-ok': { bg: 'bg-norm/8', border: 'border-norm/20', icon: '✓', iconBg: 'bg-norm', title: 'All parameters within normal range', subtitle: 'No anomalies detected. Keep up the good work!', textColor: 'text-norm' },
-    'attention': { bg: 'bg-warn/8', border: 'border-warn/20', icon: '!', iconBg: 'bg-warn', title: `${anomalies.length} parameter${anomalies.length > 1 ? 's' : ''} need${anomalies.length === 1 ? 's' : ''} attention`, subtitle: 'Some values are outside the reference range. Consider discussing with your doctor at your next visit.', textColor: 'text-warn' },
-    'concerning': { bg: 'bg-crit/8', border: 'border-crit/20', icon: '!!', iconBg: 'bg-crit', title: `${anomalies.length} parameters outside normal range`, subtitle: 'Multiple values need attention. We recommend scheduling a consultation with your doctor.', textColor: 'text-crit' },
+    'all-ok': { bg: 'bg-ok/8', border: 'border-ok/20', icon: '✓', iconBg: 'bg-ok', title: 'All parameters within normal range', subtitle: 'No anomalies detected. Keep up the good work!', textColor: 'text-ok' },
+    'attention': { bg: 'bg-attn/8', border: 'border-attn/20', icon: '!', iconBg: 'bg-attn', title: `${anomalies.length} parameter${anomalies.length > 1 ? 's' : ''} need${anomalies.length === 1 ? 's' : ''} attention`, subtitle: 'Some values are outside the reference range. Consider discussing with your doctor at your next visit.', textColor: 'text-attn' },
+    'concerning': { bg: 'bg-alert/8', border: 'border-alert/20', icon: '!!', iconBg: 'bg-alert', title: `${anomalies.length} parameters outside normal range`, subtitle: 'Multiple values need attention. We recommend scheduling a consultation with your doctor.', textColor: 'text-alert' },
   }
 
   const status = statusConfig[overallStatus]
@@ -273,10 +275,10 @@ function DocumentDetail({ document }: { document: DocumentResponse }) {
   return (
     <Card className="overflow-hidden">
       {/* Header */}
-      <div className="flex flex-col gap-3 border-b border-brd px-5 py-4 sm:flex-row sm:items-start sm:justify-between">
+      <div className="flex flex-col gap-3 border-b border-line px-5 py-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h2 className="text-base font-black text-txtP">{document.fileName}</h2>
-          <p className="mt-1 text-sm text-txtS">{documentTypeLabel(document.documentType)} · Report date {formatDate(document.reportDate)}</p>
+          <h2 className="text-base font-semibold text-deep">{document.fileName}</h2>
+          <p className="mt-1 text-sm text-mid">{documentTypeLabel(document.documentType)} · Report date {formatDate(document.reportDate)}</p>
         </div>
         <StatusBadge status={document.processingStatus} />
       </div>
@@ -288,13 +290,13 @@ function DocumentDetail({ document }: { document: DocumentResponse }) {
         {totalWithRange > 0 && (
           <div className={`rounded-2xl border ${status.border} ${status.bg} p-4`}>
             <div className="flex items-start gap-3">
-              <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${status.iconBg} text-white text-sm font-black`}>
+              <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${status.iconBg} text-white text-sm font-semibold`}>
                 {status.icon}
               </div>
               <div className="min-w-0 flex-1">
-                <h3 className={`text-sm font-black ${status.textColor}`}>{status.title}</h3>
-                <p className="mt-1 text-sm leading-relaxed text-txtS">{status.subtitle}</p>
-                <div className="mt-2 text-xs font-medium text-txtS">
+                <h3 className={`text-sm font-semibold ${status.textColor}`}>{status.title}</h3>
+                <p className="mt-1 text-sm leading-relaxed text-mid">{status.subtitle}</p>
+                <div className="mt-2 text-xs font-medium text-mid">
                   {normalCount}/{totalWithRange} parameters normal
                 </div>
               </div>
@@ -305,27 +307,43 @@ function DocumentDetail({ document }: { document: DocumentResponse }) {
         {/* ─── ANOMALY ALERTS ─── */}
         {anomalies.length > 0 && (
           <div>
-            <h3 className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.15em] text-txtS mb-3">
-              <span className="flex h-5 w-5 items-center justify-center rounded-md bg-warn/10 text-warn text-[10px] font-black">!</span>
+            <h3 className="text-xs font-medium text-mid mb-3">
               Flagged values
             </h3>
-            <div className="grid gap-2 sm:grid-cols-2">
+            <div className="grid gap-3 sm:grid-cols-2">
               {anomalies.map((p) => {
                 const isHigh = p.status === 'high'
+                const borderClass = isHigh ? 'border-alert' : 'border-attn'
+                const bgClass = isHigh ? 'bg-alert/[0.04]' : 'bg-attn/[0.04]'
+                const textClass = isHigh ? 'text-alert' : 'text-attn'
+                
                 return (
-                  <div key={`${p.parameterName}-${p.unit}`} className={`rounded-xl border px-4 py-3 ${isHigh ? 'border-crit/20 bg-crit/[0.03]' : 'border-warn/20 bg-warn/[0.03]'}`}>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-bold text-txtP">{p.parameterName}</span>
-                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-black uppercase ${isHigh ? 'bg-crit/10 text-crit' : 'bg-warn/10 text-warn'}`}>
+                  <div key={`${p.parameterName}-${p.unit}`} className={`border-l-[3px] p-4 ${bgClass} ${borderClass}`}>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-semibold text-deep">{p.parameterName}</span>
+                      <span className={`text-[10px] font-bold uppercase ${textClass}`}>
                         {isHigh ? '↑ High' : '↓ Low'}
                       </span>
                     </div>
-                    <div className="mt-1.5 flex items-baseline gap-2">
-                      <span className={`text-xl font-black tabular-nums ${isHigh ? 'text-crit' : 'text-warn'}`}>{p.value}</span>
-                      <span className="text-xs text-txtS">{p.unit}</span>
+                    <div className="flex items-baseline gap-2 mb-1.5">
+                      <span className={`text-2xl font-semibold tabular-nums ${textClass}`}>{p.value}</span>
+                      <span className="text-sm text-mid">{p.unit}</span>
                     </div>
-                    <div className="mt-1 text-xs text-txtS">
-                      Normal range: {p.referenceRangeLow} – {p.referenceRangeHigh} {p.unit}
+                    <div className="text-xs text-mid flex items-center gap-2">
+                      <span>Ref: {p.referenceRangeLow} – {p.referenceRangeHigh}</span>
+                      <div className="h-1 w-16 bg-line/50 rounded-full overflow-hidden flex ml-auto">
+                        {isHigh ? (
+                          <>
+                            <div className="h-full w-2/3 bg-ok/40" />
+                            <div className="h-full w-1/3 bg-alert" />
+                          </>
+                        ) : (
+                          <>
+                            <div className="h-full w-1/3 bg-attn" />
+                            <div className="h-full w-2/3 bg-ok/40" />
+                          </>
+                        )}
+                      </div>
                     </div>
                   </div>
                 )
@@ -334,65 +352,48 @@ function DocumentDetail({ document }: { document: DocumentResponse }) {
           </div>
         )}
 
-        {/* ─── AI RAW SUMMARY (collapsible) ─── */}
+        {/* ─── AI SUMMARY ─── */}
         {summaryText && (
-          <div>
-            <button
-              onClick={() => setShowRawSummary(!showRawSummary)}
-              className="flex items-center gap-2 text-xs font-bold text-pri hover:underline transition-colors"
-            >
-              <div className="flex h-5 w-5 items-center justify-center rounded-md bg-pri/10">
-                <Sparkles size={11} className="text-pri" />
-              </div>
-              {showRawSummary ? 'Hide detailed AI analysis' : 'View detailed AI analysis'}
-              <span className="text-txtS">{showRawSummary ? '▲' : '▼'}</span>
-            </button>
-            {showRawSummary && (
-              <div className="mt-4 rounded-crd border-2 border-warn/30 bg-warn/5 p-5">
-                <div className="flex items-start gap-3 mb-3">
-                  <span className="text-xl">🤖</span>
-                  <h4 className="font-bold text-txtP">AI-Generated Summary</h4>
-                </div>
-                <p className="text-sm text-txtS whitespace-pre-line leading-relaxed">{summaryText}</p>
-              </div>
-            )}
+          <div className="border-l-[3px] border-focus/30 pl-4 py-1">
+            <h4 className="text-xs font-medium text-mid mb-2">AI-generated summary</h4>
+            <p className="text-sm text-deep whitespace-pre-line leading-relaxed">{summaryText}</p>
           </div>
         )}
 
         {/* ─── PARAMETERS TABLE ─── */}
         <div>
-          <h3 className="text-xs font-black uppercase tracking-[0.15em] text-txtS mb-3">All extracted parameters</h3>
-          <div className="rounded-xl border border-brd overflow-hidden">
+          <h3 className="text-xs font-medium text-mid mb-3">All extracted parameters</h3>
+          <div className="rounded-xl border border-line overflow-hidden">
             <table className="min-w-full text-left text-sm">
               <thead>
                 <tr className="bg-slate-50/80">
-                  <th className="px-4 py-2.5 text-xs font-bold uppercase tracking-wide text-txtS">Parameter</th>
-                  <th className="px-4 py-2.5 text-xs font-bold uppercase tracking-wide text-txtS">Value</th>
-                  <th className="px-4 py-2.5 text-xs font-bold uppercase tracking-wide text-txtS">Ref. Range</th>
-                  <th className="px-4 py-2.5 text-xs font-bold uppercase tracking-wide text-txtS">Status</th>
-                  <th className="px-4 py-2.5 text-xs font-bold uppercase tracking-wide text-txtS">Confidence</th>
+                  <th className="px-4 py-2.5 text-xs font-medium text-mid">Parameter</th>
+                  <th className="px-4 py-2.5 text-xs font-medium text-mid">Value</th>
+                  <th className="px-4 py-2.5 text-xs font-medium text-mid">Reference range</th>
+                  <th className="px-4 py-2.5 text-xs font-medium text-mid">Status</th>
+                  <th className="px-4 py-2.5 text-xs font-medium text-mid">Confidence</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-brd/60">
+              <tbody className="divide-y divide-line/60">
                 {categorized.length === 0 ? (
-                  <tr><td className="px-4 py-4 text-txtS" colSpan={5}>No extracted parameters available yet.</td></tr>
+                  <tr><td className="px-4 py-4 text-mid" colSpan={5}>No extracted parameters available yet.</td></tr>
                 ) : (
                   categorized.map((p) => (
-                    <tr key={`${p.parameterName}-${p.unit}`} className={p.status === 'high' || p.status === 'low' ? 'bg-crit/[0.02]' : ''}>
-                      <td className="px-4 py-2.5 font-medium text-txtP">{p.parameterName}</td>
-                      <td className={`px-4 py-2.5 font-bold tabular-nums ${
-                        p.status === 'high' || p.status === 'low' ? 'text-crit' : 'text-txtP'
+                    <tr key={`${p.parameterName}-${p.unit}`} className={p.status === 'high' || p.status === 'low' ? 'bg-alert/[0.02]' : ''}>
+                      <td className="px-4 py-2.5 font-medium text-deep">{p.parameterName}</td>
+                      <td className={`px-4 py-2.5 font-semibold tabular-nums ${
+                        p.status === 'high' || p.status === 'low' ? 'text-alert' : 'text-deep'
                       }`}>
-                        {p.value} <span className="text-xs font-normal text-txtS">{p.unit}</span>
+                        {p.value} <span className="text-xs font-normal text-mid">{p.unit}</span>
                       </td>
-                      <td className="px-4 py-2.5 text-txtS tabular-nums">
+                      <td className="px-4 py-2.5 text-mid tabular-nums">
                         {p.referenceRangeLow ?? '–'} – {p.referenceRangeHigh ?? '–'}
                       </td>
                       <td className="px-4 py-2.5">
-                        {p.status === 'normal' && <span className="inline-flex items-center gap-1 rounded-full bg-norm/10 px-2 py-0.5 text-[10px] font-bold text-norm">✓ Normal</span>}
-                        {p.status === 'high' && <span className="inline-flex items-center gap-1 rounded-full bg-crit/10 px-2 py-0.5 text-[10px] font-bold text-crit">↑ High</span>}
-                        {p.status === 'low' && <span className="inline-flex items-center gap-1 rounded-full bg-warn/10 px-2 py-0.5 text-[10px] font-bold text-warn">↓ Low</span>}
-                        {p.status === 'unknown' && <span className="inline-flex rounded-full bg-brd/50 px-2 py-0.5 text-[10px] font-bold text-txtS">—</span>}
+                        {p.status === 'normal' && <span className="inline-flex items-center gap-1 rounded-full bg-ok/10 px-2 py-0.5 text-[10px] font-semibold text-ok">✓ Normal</span>}
+                        {p.status === 'high' && <span className="inline-flex items-center gap-1 rounded-full bg-alert/10 px-2 py-0.5 text-[10px] font-semibold text-alert">↑ High</span>}
+                        {p.status === 'low' && <span className="inline-flex items-center gap-1 rounded-full bg-attn/10 px-2 py-0.5 text-[10px] font-semibold text-attn">↓ Low</span>}
+                        {p.status === 'unknown' && <span className="inline-flex rounded-full bg-line/50 px-2 py-0.5 text-[10px] font-semibold text-mid">—</span>}
                       </td>
                       <td className="px-4 py-2.5">
                         {p.confidence ? (
@@ -401,13 +402,13 @@ function DocumentDetail({ document }: { document: DocumentResponse }) {
                             title={`AI extraction confidence: ${p.confidence}. HIGH = very reliable, MEDIUM = review recommended, LOW = manual verification needed.`}
                           >
                             <span className={`inline-block h-2.5 w-2.5 rounded-full ${
-                              p.confidence === 'HIGH' ? 'bg-norm' :
-                              p.confidence === 'MEDIUM' ? 'bg-warn' : 'bg-crit'
+                              p.confidence === 'HIGH' ? 'bg-ok' :
+                              p.confidence === 'MEDIUM' ? 'bg-attn' : 'bg-alert'
                             }`} />
-                            <span className="text-[10px] font-bold text-txtS">{p.confidence}</span>
+                            <span className="text-[10px] font-semibold text-mid">{p.confidence}</span>
                           </span>
                         ) : (
-                          <span className="text-[10px] text-txtS">—</span>
+                          <span className="text-[10px] text-mid">—</span>
                         )}
                       </td>
                     </tr>
@@ -421,4 +422,3 @@ function DocumentDetail({ document }: { document: DocumentResponse }) {
     </Card>
   )
 }
-

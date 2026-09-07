@@ -92,7 +92,7 @@ export default function TimelinePage() {
         title={`${activeProfile?.fullName || ''} Timeline`}
         description="A chronological view of medical events — doctor visits, tests, uploads, and notes."
         action={
-          <button onClick={() => setShowAddModal(true)} className="inline-flex items-center gap-2 rounded-btn bg-gradient-to-r from-pri to-sec px-4 py-2 text-sm font-bold text-white shadow-glow">
+          <button onClick={() => setShowAddModal(true)} className="inline-flex items-center gap-2 rounded-md bg-focus px-4 py-2 text-sm font-bold text-white shadow-md">
             <Plus size={16} />Add Event
           </button>
         }
@@ -103,39 +103,39 @@ export default function TimelinePage() {
           title="Timeline is empty"
           description="Add your first event or upload a document to start building your health timeline."
           action={
-            <button onClick={() => setShowAddModal(true)} className="inline-flex items-center gap-2 rounded-btn bg-gradient-to-r from-pri to-sec px-4 py-2 text-sm font-bold text-white shadow-glow">
+            <button onClick={() => setShowAddModal(true)} className="inline-flex items-center gap-2 rounded-md bg-focus px-4 py-2 text-sm font-bold text-white shadow-md">
               <Plus size={16} />Add First Event
             </button>
           }
         />
       ) : (
         <Card className="p-5">
-          <div className="relative space-y-6 before:absolute before:bottom-2 before:left-4 before:top-2 before:w-px before:bg-gradient-to-b before:from-pri before:to-sec">
+          <div className="relative space-y-6 before:absolute before:bottom-2 before:left-4 before:top-2 before:w-px before:bg-gradient-to-b before:from-focus before:to-focus/30">
             {events.map((event) => {
               const Icon = eventTypeIcons[event.eventType] || FileText
               return (
                 <div key={event.id} className="relative flex gap-4">
-                  <div className="z-10 mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-pri to-sec text-white shadow-glow">
+                  <div className="z-10 mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-focus text-white shadow-sm">
                     <Icon size={14} />
                   </div>
-                  <div className="min-w-0 flex-1 rounded-crd border border-brd bg-white/80 p-4 shadow-crd">
+                  <div className="min-w-0 flex-1 rounded-md border border-line bg-surf p-4 shadow-md">
                     <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
                       <div>
-                        <div className="text-xs font-medium uppercase tracking-wide text-txtS">{timelineEventLabel(event.eventType)}</div>
-                        <h2 className="mt-1 text-base font-semibold text-txtP">{event.title}</h2>
+                        <div className="text-xs font-medium text-mid">{timelineEventLabel(event.eventType)}</div>
+                        <h2 className="mt-1 font-display text-base font-semibold text-deep">{event.title}</h2>
                       </div>
                       <div className="flex items-center gap-2">
-                        <time className="text-sm font-medium text-txtS">{formatDate(event.eventDate)}</time>
+                        <time className="text-sm font-medium text-mid">{formatDate(event.eventDate)}</time>
                         {event.isManual && (
-                          <button onClick={() => handleDelete(event.id)} className="rounded-full p-1.5 text-txtS hover:text-crit hover:bg-crit/10 transition-colors" title="Delete">
+                          <button onClick={() => handleDelete(event.id)} className="rounded-full p-1.5 text-mid hover:text-alert hover:bg-alert/10 transition-colors" title="Delete">
                             <Trash2 size={14} />
                           </button>
                         )}
                       </div>
                     </div>
-                    {event.description ? <p className="mt-2 text-sm leading-6 text-txtS">{event.description}</p> : null}
+                    {event.description ? <p className="mt-2 text-sm leading-6 text-mid">{event.description}</p> : null}
                     {event.relatedDocumentId ? (
-                      <a className="mt-3 inline-flex text-sm font-medium text-pri hover:underline" href={`/app/insights?document=${event.relatedDocumentId}`}>View related document</a>
+                      <a className="mt-3 inline-flex text-sm font-medium text-focus hover:underline" href={`/app/insights?document=${event.relatedDocumentId}`}>View related document</a>
                     ) : null}
                   </div>
                 </div>
@@ -150,7 +150,7 @@ export default function TimelinePage() {
           <button
             onClick={() => void loadPage(page + 1, true)}
             disabled={loadingMore}
-            className="inline-flex items-center gap-2 rounded-btn border border-brd bg-white px-6 py-2.5 text-sm font-medium text-txtP shadow-sm transition-all hover:border-pri/40 hover:shadow-md disabled:opacity-60"
+            className="inline-flex items-center gap-2 rounded-md border border-line bg-white px-6 py-2.5 text-sm font-medium text-deep shadow-sm transition-all hover:border-focus/40 hover:shadow-md disabled:opacity-60"
           >
             {loadingMore ? (
               <><Loader2 size={16} className="animate-spin" />Loading...</>
@@ -196,14 +196,14 @@ function AddEventModal({ memberId, onClose, onCreated }: { memberId: string; onC
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fdIn" onClick={onClose}>
-      <div className="relative mx-4 w-full max-w-md rounded-crd border border-brd bg-white p-6 shadow-glow" onClick={(e) => e.stopPropagation()}>
-        <button onClick={onClose} className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full text-txtS transition-colors hover:bg-brd/50 hover:text-txtP">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-deep/50 backdrop-blur-sm animate-enter" onClick={onClose}>
+      <div className="relative mx-4 w-full max-w-md rounded-md border border-line bg-white p-6 shadow-lg" onClick={(e) => e.stopPropagation()}>
+        <button onClick={onClose} className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full text-mid transition-colors hover:bg-line/50 hover:text-deep">
           <X size={18} />
         </button>
-        <h3 className="text-lg font-black text-txtP">Add timeline event</h3>
-        <p className="mt-1 text-sm text-txtS">Record a doctor visit, test, vaccination, or note.</p>
-        {error && <p className="mt-3 text-sm font-medium text-crit">{error}</p>}
+        <h3 className="text-lg font-bold text-deep">Add timeline event</h3>
+        <p className="mt-1 text-sm text-mid">Record a doctor visit, test, vaccination, or note.</p>
+        {error && <p className="mt-3 text-sm font-medium text-alert">{error}</p>}
         <form className="mt-5 space-y-4" onSubmit={handleSubmit}>
           <TextField label="Title" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required placeholder="e.g. Annual check-up with Dr. Sharma" />
           <div className="grid grid-cols-2 gap-4">
