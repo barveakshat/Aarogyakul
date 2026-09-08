@@ -1,12 +1,24 @@
 import { FormEvent, useState } from 'react'
-import { Link, Navigate, useNavigate } from 'react-router'
+import { Link, Navigate, useNavigate, useSearchParams } from 'react-router'
 import { useAuth } from '../hooks/useAuth'
 import { Alert, Button, Card, PasswordField, TextField } from '../components/ui'
 import { BrandMark } from '../components/BrandMark'
+import { ApiRequestError } from '../api/client'
+
+/** Returns a safe, actionable sign-in message without revealing account existence. */
+export function loginErrorMessage(error: unknown) {
+  if (!(error instanceof ApiRequestError)) return 'Unable to sign in right now. Please try again.'
+  if (error.status === 401 || error.code === 'INVALID_CREDENTIALS') return 'Incorrect email or password. Please check your details and try again.'
+  if (error.status === 429 || error.code === 'RATE_LIMITED') return 'Too many sign-in attempts. Please wait a minute, then try again.'
+  if (!error.status) return 'Unable to reach the server. Check your connection and try again.'
+  if (error.status >= 500) return 'The sign-in service is temporarily unavailable. Please try again shortly.'
+  return 'Unable to sign in with those details. Please check your email and password.'
+}
 
 export default function LoginPage() {
   const { login, user } = useAuth()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -39,15 +51,7 @@ export default function LoginPage() {
       await login(email.trim(), password)
       navigate('/app', { replace: true })
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Login failed'
-      // Map common backend messages to user-friendly text
-      if (msg.toLowerCase().includes('invalid email or password') || msg.toLowerCase().includes('invalid credentials')) {
-        setError('Incorrect email or password. Please check and try again.')
-      } else if (msg.toLowerCase().includes('network') || msg.toLowerCase().includes('econnrefused')) {
-        setError('Unable to reach the server. Please check your connection and try again.')
-      } else {
-        setError(msg)
-      }
+      setError(loginErrorMessage(err))
     } finally {
       setSubmitting(false)
     }
@@ -56,6 +60,7 @@ export default function LoginPage() {
   return (
     <AuthFrame title="Welcome back" subtitle="Sign in to continue managing your family health records.">
       <form className="space-y-4" onSubmit={handleSubmit} noValidate>
+        {searchParams.get('reason') === 'session-expired' ? <Alert tone="info" message="Your session has expired. Please sign in again." /> : null}
         {error ? <Alert message={error} /> : null}
         <div>
           <TextField

@@ -24,11 +24,26 @@ const DEMO_USER: User = {
   fullName: 'Rajesh Sharma',
 }
 
+function storedUser(): User | null {
+  const stored = localStorage.getItem(USER_KEY)
+  if (!stored) return null
+
+  try {
+    const user = JSON.parse(stored) as Partial<User>
+    if (typeof user.id === 'string' && typeof user.email === 'string' && typeof user.fullName === 'string') {
+      return user as User
+    }
+  } catch {
+    // A stale or malformed local session must not prevent a new sign-in.
+  }
+
+  localStorage.removeItem(USER_KEY)
+  localStorage.removeItem('ak_token')
+  return null
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(() => {
-    const stored = localStorage.getItem(USER_KEY)
-    return stored ? (JSON.parse(stored) as User) : null
-  })
+  const [user, setUser] = useState<User | null>(storedUser)
   const [loading, setLoading] = useState(true)
   const [isDemo, setIsDemo] = useState(() => localStorage.getItem(DEMO_KEY) === 'true')
 

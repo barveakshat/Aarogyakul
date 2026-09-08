@@ -2,7 +2,7 @@ import { FormEvent, useEffect, useState, useCallback } from 'react'
 import { useSearchParams } from 'react-router'
 import { getDocument, listDocuments, uploadDocument } from '../api/documents'
 import { Alert, Button, Card, EmptyState, LoadingState, PageHeader, SelectField, StatusBadge } from '../components/ui'
-import type { DocumentResponse, DocumentSummaryResponse, DocumentType } from '../types/api'
+import type { DocumentResponse, DocumentSummaryResponse, DocumentType, ParameterResponse } from '../types/api'
 import { documentTypeLabel, formatDate, formatDateTime } from '../utils/format'
 import { Plus, X } from 'lucide-react'
 import { useProfile } from '../context/ProfileContext'
@@ -129,9 +129,9 @@ export default function UploadPage() {
 
     setUploading(true)
     try {
-      const uploaded = await uploadDocument(memberId, file, documentType)
+      await uploadDocument(memberId, file, documentType)
       setFile(null)
-      setSearchParams({ document: uploaded.documentId })
+      setSearchParams({})
       await load()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Upload failed')
@@ -214,7 +214,6 @@ export default function UploadPage() {
         </Card>
       )}
 
-      {/* Selected document detail */}
       {selectedDocument ? <DocumentDetail document={selectedDocument} /> : null}
 
       {/* Upload Modal */}
@@ -253,36 +252,15 @@ export default function UploadPage() {
 
 function DocumentDetail({ document }: { document: DocumentResponse }) {
   const summaryText = document.insight?.summaryText || ''
-
-  // Categorize parameters by status
-  const categorized = document.parameters.map((p) => {
-    const hasRange = p.referenceRangeLow != null && p.referenceRangeHigh != null
-    if (!hasRange) return { ...p, status: 'unknown' as const }
-    if (p.value < p.referenceRangeLow!) return { ...p, status: 'low' as const }
-    if (p.value > p.referenceRangeHigh!) return { ...p, status: 'high' as const }
-    return { ...p, status: 'normal' as const }
-  })
+  const categorized = document.parameters.map(parameterWithStatus)
 
   const anomalies = categorized.filter((p) => p.status === 'low' || p.status === 'high')
+  const routineParameters = categorized.filter((p) => p.status === 'normal' || p.status === 'unknown')
   const normalCount = categorized.filter((p) => p.status === 'normal').length
   const totalWithRange = categorized.filter((p) => p.status !== 'unknown').length
 
-  // Overall status
-  const overallStatus: 'all-ok' | 'attention' | 'concerning' =
-    anomalies.length === 0 ? 'all-ok' :
-    anomalies.length <= 2 ? 'attention' : 'concerning'
-
-  const statusConfig = {
-    'all-ok': { bg: 'bg-ok/8', border: 'border-ok/20', icon: '✓', iconBg: 'bg-ok', title: 'All parameters within normal range', subtitle: 'No anomalies detected. Keep up the good work!', textColor: 'text-ok' },
-    'attention': { bg: 'bg-attn/8', border: 'border-attn/20', icon: '!', iconBg: 'bg-attn', title: `${anomalies.length} parameter${anomalies.length > 1 ? 's' : ''} need${anomalies.length === 1 ? 's' : ''} attention`, subtitle: 'Some values are outside the reference range. Consider discussing with your doctor at your next visit.', textColor: 'text-attn' },
-    'concerning': { bg: 'bg-alert/8', border: 'border-alert/20', icon: '!!', iconBg: 'bg-alert', title: `${anomalies.length} parameters outside normal range`, subtitle: 'Multiple values need attention. We recommend scheduling a consultation with your doctor.', textColor: 'text-alert' },
-  }
-
-  const status = statusConfig[overallStatus]
-
   return (
     <Card className="overflow-hidden">
-      {/* Header */}
       <div className="flex flex-col gap-3 border-b border-line px-5 py-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h2 className="text-base font-semibold text-deep">{document.fileName}</h2>
@@ -293,88 +271,52 @@ function DocumentDetail({ document }: { document: DocumentResponse }) {
 
       {document.processingError ? <div className="px-5 pt-4"><Alert message={document.processingError} /></div> : null}
 
-      <div className="p-5 space-y-5">
-        {/* ─── OVERALL STATUS BANNER ─── */}
+      <div className="space-y-8 p-5 sm:p-6">
         {totalWithRange > 0 && (
-          <div className={`rounded-2xl border ${status.border} ${status.bg} p-4`}>
-            <div className="flex items-start gap-3">
-              <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${status.iconBg} text-white text-sm font-semibold`}>
-                {status.icon}
-              </div>
-              <div className="min-w-0 flex-1">
-                <h3 className={`text-sm font-semibold ${status.textColor}`}>{status.title}</h3>
-                <p className="mt-1 text-sm leading-relaxed text-mid">{status.subtitle}</p>
-                <div className="mt-2 text-xs font-medium text-mid">
-                  {normalCount}/{totalWithRange} parameters normal
-                </div>
-              </div>
+          <div className="flex flex-col gap-2 border-b border-line pb-5 sm:flex-row sm:items-baseline sm:justify-between">
+            <div>
+              <h3 className="text-sm font-semibold text-deep">
+                {anomalies.length === 0 ? 'All measured values are within range' : `${anomalies.length} value${anomalies.length === 1 ? '' : 's'} flagged for review`}
+              </h3>
+              <p className="mt-1 text-sm text-mid">
+                {anomalies.length === 0 ? 'No extracted values fall outside their reported reference range.' : 'Reference ranges are provided by the report and are not a diagnosis.'}
+              </p>
             </div>
+            <span className="tabular-nums text-xs font-medium text-mid">{normalCount} of {totalWithRange} in range</span>
           </div>
         )}
 
-        {/* ─── ANOMALY ALERTS ─── */}
         {anomalies.length > 0 && (
-          <div>
-            <h3 className="text-xs font-medium text-mid mb-3">
-              Flagged values
-            </h3>
-            <div className="grid gap-3 sm:grid-cols-2">
-              {anomalies.map((p) => {
-                const isHigh = p.status === 'high'
-                const borderClass = isHigh ? 'border-alert' : 'border-attn'
-                const bgClass = isHigh ? 'bg-alert/[0.04]' : 'bg-attn/[0.04]'
-                const textClass = isHigh ? 'text-alert' : 'text-attn'
-                
-                return (
-                  <div key={`${p.parameterName}-${p.unit}`} className={`border-l-[3px] p-4 ${bgClass} ${borderClass}`}>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-semibold text-deep">{p.parameterName}</span>
-                      <span className={`text-[10px] font-bold uppercase ${textClass}`}>
-                        {isHigh ? '↑ High' : '↓ Low'}
-                      </span>
-                    </div>
-                    <div className="flex items-baseline gap-2 mb-1.5">
-                      <span className={`text-2xl font-semibold tabular-nums ${textClass}`}>{p.value}</span>
-                      <span className="text-sm text-mid">{p.unit}</span>
-                    </div>
-                    <div className="text-xs text-mid flex items-center gap-2">
-                      <span>Ref: {p.referenceRangeLow} – {p.referenceRangeHigh}</span>
-                      <div className="h-1 w-16 bg-line/50 rounded-full overflow-hidden flex ml-auto">
-                        {isHigh ? (
-                          <>
-                            <div className="h-full w-2/3 bg-ok/40" />
-                            <div className="h-full w-1/3 bg-alert" />
-                          </>
-                        ) : (
-                          <>
-                            <div className="h-full w-1/3 bg-attn" />
-                            <div className="h-full w-2/3 bg-ok/40" />
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                )
-              })}
+          <section aria-labelledby="flagged-values-heading">
+            <div className="mb-3 flex items-baseline justify-between gap-3">
+              <h3 id="flagged-values-heading" className="text-base font-semibold text-deep">Flagged values</h3>
+              <span className="text-xs text-mid">Outside the report reference range</span>
             </div>
-          </div>
+            <div className="space-y-3">
+              {anomalies.map((parameter) => <FlaggedParameter key={`${parameter.parameterName}-${parameter.unit}`} parameter={parameter} />)}
+            </div>
+          </section>
         )}
 
-        {/* ─── AI SUMMARY ─── */}
         {summaryText && (
-          <div className="border-l-[3px] border-focus/30 pl-4 py-1">
-            <h4 className="text-xs font-medium text-mid mb-2">AI-generated summary</h4>
-            <p className="text-sm text-deep whitespace-pre-line leading-relaxed">{summaryText}</p>
-          </div>
+          <section className="border-l-[3px] border-focus/30 py-1 pl-4" aria-labelledby="ai-summary-heading">
+            <div className="mb-3 flex items-baseline justify-between gap-3 border-b border-line pb-2">
+              <h3 id="ai-summary-heading" className="text-xs font-medium text-deep">AI-generated summary</h3>
+              <span className="text-[11px] text-soft">Based on this report</span>
+            </div>
+            <p className="max-w-[72ch] whitespace-pre-line text-sm leading-6 text-deep">{summaryText}</p>
+          </section>
         )}
 
-        {/* ─── PARAMETERS TABLE ─── */}
-        <div>
-          <h3 className="text-xs font-medium text-mid mb-3">All extracted parameters</h3>
-          <div className="rounded-xl border border-line overflow-hidden">
-            <table className="min-w-full text-left text-sm">
+        <section aria-labelledby="extracted-parameters-heading">
+          <div className="mb-3 flex items-baseline justify-between gap-3">
+            <h3 id="extracted-parameters-heading" className="text-base font-semibold text-deep">Extracted parameters</h3>
+            {anomalies.length > 0 ? <span className="text-xs text-mid">Flagged values are shown above</span> : null}
+          </div>
+          <div className="overflow-x-auto rounded-md border border-line">
+            <table className="min-w-[620px] w-full text-left text-sm">
               <thead>
-                <tr className="bg-slate-50/80">
+                <tr className="border-b border-line bg-bg">
                   <th className="px-4 py-2.5 text-xs font-medium text-mid">Parameter</th>
                   <th className="px-4 py-2.5 text-xs font-medium text-mid">Value</th>
                   <th className="px-4 py-2.5 text-xs font-medium text-mid">Reference range</th>
@@ -383,50 +325,109 @@ function DocumentDetail({ document }: { document: DocumentResponse }) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-line/60">
-                {categorized.length === 0 ? (
+                {routineParameters.length === 0 && anomalies.length === 0 ? (
                   <tr><td className="px-4 py-4 text-mid" colSpan={5}>No extracted parameters available yet.</td></tr>
+                ) : routineParameters.length === 0 ? (
+                  <tr><td className="px-4 py-4 text-mid" colSpan={5}>All extracted values are flagged above for review.</td></tr>
                 ) : (
-                  categorized.map((p) => (
-                    <tr key={`${p.parameterName}-${p.unit}`} className={p.status === 'high' || p.status === 'low' ? 'bg-alert/[0.02]' : ''}>
+                  routineParameters.map((p) => (
+                    <tr key={`${p.parameterName}-${p.unit}`}>
                       <td className="px-4 py-2.5 font-medium text-deep">{p.parameterName}</td>
-                      <td className={`px-4 py-2.5 font-semibold tabular-nums ${
-                        p.status === 'high' || p.status === 'low' ? 'text-alert' : 'text-deep'
-                      }`}>
+                      <td className="px-4 py-2.5 font-semibold tabular-nums text-deep">
                         {p.value} <span className="text-xs font-normal text-mid">{p.unit}</span>
                       </td>
                       <td className="px-4 py-2.5 text-mid tabular-nums">
                         {p.referenceRangeLow ?? '–'} – {p.referenceRangeHigh ?? '–'}
                       </td>
                       <td className="px-4 py-2.5">
-                        {p.status === 'normal' && <span className="inline-flex items-center gap-1 rounded-full bg-ok/10 px-2 py-0.5 text-[10px] font-semibold text-ok">✓ Normal</span>}
-                        {p.status === 'high' && <span className="inline-flex items-center gap-1 rounded-full bg-alert/10 px-2 py-0.5 text-[10px] font-semibold text-alert">↑ High</span>}
-                        {p.status === 'low' && <span className="inline-flex items-center gap-1 rounded-full bg-attn/10 px-2 py-0.5 text-[10px] font-semibold text-attn">↓ Low</span>}
-                        {p.status === 'unknown' && <span className="inline-flex rounded-full bg-line/50 px-2 py-0.5 text-[10px] font-semibold text-mid">—</span>}
+                        {p.status === 'normal' && <span className="inline-flex items-center gap-1 text-xs font-medium text-ok">✓ Normal</span>}
+                        {p.status === 'unknown' && <span className="text-xs font-medium text-mid">No range reported</span>}
                       </td>
-                      <td className="px-4 py-2.5">
-                        {p.confidence ? (
-                          <span
-                            className="inline-flex items-center gap-1.5"
-                            title={`AI extraction confidence: ${p.confidence}. HIGH = very reliable, MEDIUM = review recommended, LOW = manual verification needed.`}
-                          >
-                            <span className={`inline-block h-2.5 w-2.5 rounded-full ${
-                              p.confidence === 'HIGH' ? 'bg-ok' :
-                              p.confidence === 'MEDIUM' ? 'bg-attn' : 'bg-alert'
-                            }`} />
-                            <span className="text-[10px] font-semibold text-mid">{p.confidence}</span>
-                          </span>
-                        ) : (
-                          <span className="text-[10px] text-mid">—</span>
-                        )}
-                      </td>
+                      <td className="px-4 py-2.5"><Confidence confidence={p.confidence} /></td>
                     </tr>
                   ))
                 )}
               </tbody>
             </table>
           </div>
-        </div>
+        </section>
       </div>
     </Card>
   )
+}
+
+type ParameterStatus = 'high' | 'low' | 'normal' | 'unknown'
+type CategorizedParameter = ParameterResponse & { status: ParameterStatus }
+
+function parameterWithStatus(parameter: ParameterResponse): CategorizedParameter {
+  if (parameter.referenceRangeLow == null || parameter.referenceRangeHigh == null) return { ...parameter, status: 'unknown' }
+  if (parameter.value < parameter.referenceRangeLow) return { ...parameter, status: 'low' }
+  if (parameter.value > parameter.referenceRangeHigh) return { ...parameter, status: 'high' }
+  return { ...parameter, status: 'normal' }
+}
+
+function FlaggedParameter({ parameter }: { parameter: CategorizedParameter }) {
+  const isHigh = parameter.status === 'high'
+  const tone = isHigh
+    ? { accent: 'border-alert', background: 'bg-alert/[0.04]', text: 'text-alert', label: '↑ High' }
+    : { accent: 'border-attn', background: 'bg-attn/[0.04]', text: 'text-attn', label: '↓ Low' }
+  const range = rangeDisplay(parameter)
+
+  return (
+    <article className={`border-l-[3px] ${tone.accent} ${tone.background} px-4 py-4 sm:px-5`}>
+      <div className="grid gap-4 sm:grid-cols-[1fr_auto] sm:items-start">
+        <div>
+          <p className={`text-xs font-semibold ${tone.text}`}>{tone.label}</p>
+          <h4 className="mt-1 text-base font-semibold text-deep">{parameter.parameterName}</h4>
+          <div className="mt-3 flex items-baseline gap-2">
+            <span className={`tabular-nums text-2xl font-semibold leading-none ${tone.text}`}>{parameter.value}</span>
+            <span className="text-sm text-mid">{parameter.unit}</span>
+          </div>
+        </div>
+        <div className="text-left sm:text-right">
+          <p className="text-xs text-mid">Reference range</p>
+          <p className="mt-1 tabular-nums text-sm font-medium text-deep">{parameter.referenceRangeLow} – {parameter.referenceRangeHigh} {parameter.unit}</p>
+          <div className="mt-3 sm:justify-end"><Confidence confidence={parameter.confidence} /></div>
+        </div>
+      </div>
+      <div className="mt-5">
+        <div className="relative h-2 bg-line/70" aria-label={`Value ${parameter.value}; reported reference range ${parameter.referenceRangeLow} to ${parameter.referenceRangeHigh}`}>
+          <span className="absolute inset-y-0 bg-ok/15" style={{ left: `${range.referenceStart}%`, width: `${range.referenceWidth}%` }} />
+          <span className={`absolute top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-surf ${isHigh ? 'bg-alert' : 'bg-attn'}`} style={{ left: `${range.valuePosition}%` }} />
+        </div>
+        <div className="mt-2 flex justify-between tabular-nums text-[11px] text-mid">
+          <span>{range.minimum}</span>
+          <span>Ref. {parameter.referenceRangeLow} – {parameter.referenceRangeHigh}</span>
+          <span>{range.maximum}</span>
+        </div>
+      </div>
+    </article>
+  )
+}
+
+function Confidence({ confidence }: { confidence?: string }) {
+  if (!confidence) return <span className="text-[11px] text-mid">Confidence unavailable</span>
+  const color = confidence === 'HIGH' ? 'bg-ok' : confidence === 'MEDIUM' ? 'bg-attn' : 'bg-alert'
+  return (
+    <span className="inline-flex items-center gap-1.5" title={`AI extraction confidence: ${confidence}. HIGH = very reliable, MEDIUM = review recommended, LOW = manual verification needed.`}>
+      <span className={`h-2 w-2 rounded-full ${color}`} />
+      <span className="text-[11px] font-semibold text-mid">{confidence} confidence</span>
+    </span>
+  )
+}
+
+function rangeDisplay(parameter: CategorizedParameter) {
+  const low = parameter.referenceRangeLow!
+  const high = parameter.referenceRangeHigh!
+  const spread = high - low || 1
+  const minimum = Math.min(low - spread * 0.2, parameter.value - spread * 0.1)
+  const maximum = Math.max(high + spread * 0.2, parameter.value + spread * 0.1)
+  const fullSpread = maximum - minimum
+  return {
+    minimum: Number(minimum.toFixed(1)),
+    maximum: Number(maximum.toFixed(1)),
+    referenceStart: ((low - minimum) / fullSpread) * 100,
+    referenceWidth: (spread / fullSpread) * 100,
+    valuePosition: ((parameter.value - minimum) / fullSpread) * 100,
+  }
 }

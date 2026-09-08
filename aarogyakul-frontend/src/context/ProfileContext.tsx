@@ -22,11 +22,17 @@ export function useProfile() {
 
 const STORAGE_KEY = 'aarogyakul_active_profile_id'
 
+/** Returns whether the family record for the current authenticated user is still loading. */
+export function isFamilyLoading(userId: string | undefined, loadedUserId: string | null) {
+  return Boolean(userId && loadedUserId !== userId)
+}
+
 export function ProfileProvider({ children }: { children: React.ReactNode }) {
   const { user, isDemo } = useAuth()
   const [family, setFamily] = useState<FamilyResponse | null>(null)
   const [activeProfile, setActiveProfileState] = useState<MemberResponse | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [loadedUserId, setLoadedUserId] = useState<string | null>(null)
+  const loading = isFamilyLoading(user?.id, loadedUserId)
 
   const fetchFamily = useCallback(async (): Promise<FamilyResponse | null> => {
     if (isDemoMode()) return demoGetMyFamily()
@@ -41,9 +47,12 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
     if (!user) {
       setFamily(null)
       setActiveProfileState(null)
-      setLoading(false)
+      setLoadedUserId(null)
       return
     }
+
+    setFamily(null)
+    setActiveProfileState(null)
     const f = await fetchFamily()
     setFamily(f)
     if (f) {
@@ -63,7 +72,7 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
         }
       }
     }
-    setLoading(false)
+    setLoadedUserId(user.id)
   }, [user, fetchFamily, isDemo])
 
   useEffect(() => {
