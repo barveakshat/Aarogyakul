@@ -1,168 +1,60 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router'
+import { Link, useNavigate } from 'react-router'
 import { useProfile } from '../context/ProfileContext'
-import { listDocuments } from '../api/documents'
-import { listTimeline } from '../api/documents'
-import { getTrackedParameters, getParameterTrend } from '../api/parameters'
-import { Card, LoadingState, PageHeader } from '../components/ui'
-import type { DocumentSummaryResponse, ParameterTrendResponse, TimelineEventResponse } from '../types/api'
-import { documentTypeLabel, formatDate, formatDateTime, timelineEventLabel } from '../utils/format'
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
-import { Upload, FolderArchive, Plus, TrendingUp } from 'lucide-react'
+import { getDocument, listDocuments, listTimeline } from '../api/documents'
+import { getParameterTrend, getTrackedParameters } from '../api/parameters'
+import { Avatar } from '../components/Avatar'
+import { Card, LoadingState } from '../components/ui'
+import type { MemberResponse, ParameterResponse, ParameterTrendResponse, TimelineEventResponse } from '../types/api'
+import { formatDate, timelineEventLabel } from '../utils/format'
+import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { Activity, CalendarDays, ChevronRight, FileText, FolderArchive, Leaf, Pencil, Plus, Syringe, TrendingDown, TrendingUp } from 'lucide-react'
 
 export default function DashboardPage() {
-  const { activeProfile } = useProfile()
-  const [documents, setDocuments] = useState<DocumentSummaryResponse[]>([])
+  const { activeProfile, family, setActiveProfile } = useProfile()
+  const navigate = useNavigate()
+  const [documents, setDocuments] = useState<Array<{ documentId: string; fileName: string; documentType: string; uploadedAt: string; reportDate?: string; processingStatus: string }>>([])
   const [timeline, setTimeline] = useState<TimelineEventResponse[]>([])
   const [trend, setTrend] = useState<ParameterTrendResponse | null>(null)
+  const [parameters, setParameters] = useState<ParameterResponse[]>([])
   const [loading, setLoading] = useState(true)
-
   useEffect(() => {
     if (!activeProfile) return
     setLoading(true)
-    Promise.all([
-      listDocuments(activeProfile.memberId),
-      listTimeline(activeProfile.memberId),
-      getTrackedParameters(activeProfile.memberId),
-    ]).then(async ([docsResult, eventsResult, tracked]) => {
-      setDocuments(docsResult.data)
-      setTimeline(eventsResult.data)
-      // Load trend for first tracked parameter (if any)
-      if (tracked.parameterNames.length > 0) {
-        const trendData = await getParameterTrend(activeProfile.memberId, tracked.parameterNames[0])
-        setTrend(trendData)
-      }
-    }).finally(() => setLoading(false))
+    Promise.all([listDocuments(activeProfile.memberId), listTimeline(activeProfile.memberId), getTrackedParameters(activeProfile.memberId)])
+      .then(async ([docs, events, tracked]) => {
+        setDocuments(docs.data)
+        setTimeline(events.data)
+        setTrend(tracked.parameterNames[0] ? await getParameterTrend(activeProfile.memberId, tracked.parameterNames[0]) : null)
+        const latestReport = docs.data.find(doc => doc.processingStatus === 'COMPLETED' && (doc.documentType === 'BLOOD_REPORT' || doc.documentType === 'LAB_REPORT'))
+        setParameters(latestReport ? (await getDocument(latestReport.documentId)).parameters : [])
+      })
+      .finally(() => setLoading(false))
   }, [activeProfile])
-
+  const today = new Date()
+  const upcoming = timeline.filter(event => new Date(`${event.eventDate}T00:00:00`) >= startOfDay(today)).slice(0, 2)
+  const points = trend?.dataPoints.map(point => ({ ...point, outOfRange: outside(point.value, point.referenceRangeLow, point.referenceRangeHigh) })) ?? []
+  const current = points[points.length - 1], previous = points[points.length - 2], delta = current && previous ? current.value - previous.value : null
   if (loading) return <LoadingState label="Loading dashboard" />
   if (!activeProfile) return null
-
-  const recentDocs = documents.slice(0, 4)
-  const recentEvents = timeline.slice(0, 5)
-
-  const chartData = trend?.dataPoints.map(dp => ({
-    date: dp.date,
-    value: dp.value,
-  })) ?? []
-
-  return (
-    <>
-      <PageHeader
-        title={`Welcome, ${activeProfile.fullName}`}
-        description="Your personal health command center — documents, timeline, and clinical notes."
-      />
-
-      <div className="mb-6 grid gap-4 md:grid-cols-4">
-        <StatCard label="Documents" value={documents.length} />
-        <StatCard label="Timeline events" value={timeline.length} />
-        <StatCard label="Allergies" value={activeProfile.allergies.length} />
-        <StatCard label="Conditions" value={activeProfile.chronicConditions.length} />
-      </div>
-
-      {chartData.length >= 2 && trend && (
-        <Card className="mb-6 p-5">
-          <div className="mb-1 flex items-center justify-between">
-            <div>
-              <h2 className="font-display text-base font-semibold text-deep">{trend.parameterName} Trend</h2>
-              <p className="text-sm text-mid">Your latest tracked parameter over time</p>
-            </div>
-            <Link to="/app/trends" className="inline-flex items-center gap-1.5 text-sm font-semibold text-focus hover:underline">
-              <TrendingUp size={14} />View all trends
-            </Link>
-          </div>
-          <div className="mt-4 h-52 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
-                <XAxis dataKey="date" tick={{ fontSize: 12, fill: '#64748B' }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 12, fill: '#64748B' }} axisLine={false} tickLine={false} />
-                <Tooltip
-                  contentStyle={{ background: '#0F172A', border: 'none', borderRadius: '12px', color: '#fff', fontSize: '13px', fontWeight: 600, padding: '8px 14px' }}
-                  labelStyle={{ color: '#94A3B8' }}
-                  formatter={(value: number) => [`${value} ${trend.unit}`, trend.parameterName]}
-                />
-                <Area type="monotone" dataKey="value" stroke="#3B5FCC" strokeWidth={2.5} fill="#3B5FCC" fillOpacity={0.1} />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </Card>
-      )}
-
-      <div className="mb-6 grid gap-4 md:grid-cols-3">
-        <QuickLink title="Upload document" text="Add a report, prescription, bill, or ID to your vault." to="/app/insights" icon={Upload} />
-        <QuickLink title="Document vault" text="Browse and search all your stored documents." to="/app/vault" icon={FolderArchive} />
-        <QuickLink title="Add timeline event" text="Log a doctor visit, test, or health note." to="/app/timeline" icon={Plus} />
-      </div>
-
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card className="p-5">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="font-display text-base font-semibold text-deep">Recent Documents</h2>
-            <Link to="/app/vault" className="text-sm font-semibold text-focus hover:underline">View all</Link>
-          </div>
-          {recentDocs.length === 0 ? (
-            <p className="text-sm text-mid py-4">No documents uploaded yet.</p>
-          ) : (
-            <div className="space-y-3">
-              {recentDocs.map((doc) => (
-                <Link key={doc.documentId} to={`/app/insights?document=${doc.documentId}`} className="flex items-center justify-between rounded-md border border-line bg-white/70 px-3 py-2.5 hover:border-focus/30 transition-colors">
-                  <div className="min-w-0">
-                    <div className="truncate text-sm font-medium text-deep">{doc.fileName}</div>
-                    <div className="text-xs text-mid">{documentTypeLabel(doc.documentType)}</div>
-                  </div>
-                  <span className="shrink-0 text-xs text-mid">{formatDateTime(doc.uploadedAt)}</span>
-                </Link>
-              ))}
-            </div>
-          )}
-        </Card>
-
-        <Card className="p-5">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="font-display text-base font-semibold text-deep">Recent Timeline</h2>
-            <Link to="/app/timeline" className="text-sm font-semibold text-focus hover:underline">View all</Link>
-          </div>
-          {recentEvents.length === 0 ? (
-            <p className="text-sm text-mid py-4">No timeline events yet.</p>
-          ) : (
-            <div className="space-y-3">
-              {recentEvents.map((event) => (
-                <div key={event.id} className="flex items-center justify-between rounded-md border border-line bg-white/70 px-3 py-2.5">
-                  <div className="min-w-0">
-                    <div className="truncate text-sm font-medium text-deep">{event.title}</div>
-                    <div className="text-xs text-mid">{timelineEventLabel(event.eventType)}</div>
-                  </div>
-                  <span className="shrink-0 text-xs text-mid">{formatDate(event.eventDate)}</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </Card>
-      </div>
-    </>
-  )
+  const labReports = documents.filter(doc => doc.documentType === 'BLOOD_REPORT' || doc.documentType === 'LAB_REPORT')
+  const medicationChanges = timeline.filter(event => event.eventType === 'MEDICATION_CHANGE')
+  const vaccinations = timeline.filter(event => event.eventType === 'VACCINATION')
+  const appointments = timeline.filter(event => event.eventType === 'DOCTOR_VISIT')
+  return <><MemberBar active={activeProfile} members={family?.members ?? [activeProfile]} onSelect={setActiveProfile} onAdd={() => navigate('/app/profiles')} /><main className="w-full px-4 py-6 md:px-8 md:py-5"><Greeting name={activeProfile.fullName} date={today} /><div className="grid gap-5 xl:grid-cols-[1.7fr_1fr]"><Profile member={activeProfile} /><EventList title="Upcoming" events={upcoming} empty="No upcoming events recorded." /></div><section className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4"><Metric icon={FileText} label="AI Insights" value={labReports.length} detail={labReports[0] ? `Last report: ${formatDate(labReports[0].reportDate ?? labReports[0].uploadedAt)}` : 'No reports yet'} /><Metric icon={Activity} label="Medication changes" value={medicationChanges.length} detail={medicationChanges.length ? 'Recorded in timeline' : 'None recorded'} /><Metric icon={Syringe} label="Vaccinations" value={vaccinations.length} detail={vaccinations.length ? 'Recorded in timeline' : 'None recorded'} tone="ok" /><Metric icon={CalendarDays} label="Appointments" value={appointments.length} detail={appointments.length ? 'Recorded in timeline' : 'None recorded'} /></section><div className="mt-5 grid gap-5 xl:grid-cols-[1.35fr_0.95fr]"><LabResults parameters={parameters.slice(0, 5)} date={labReports[0]?.reportDate} />{trend && points.length >= 2 && current && <Trend trend={trend} points={points} current={current} delta={delta} />}</div><div className="mt-5 grid gap-5 xl:grid-cols-3"><EventList title="Recent activity" events={timeline.slice(0, 4)} empty="No timeline events yet." /><Action /><Closing /></div></main></>
 }
 
-function StatCard({ label, value }: { label: string; value: number }) {
-  return (
-    <Card className="p-5">
-      <div className="text-3xl font-bold text-focus">{value}</div>
-      <div className="mt-1 text-xs font-semibold text-mid">{label}</div>
-    </Card>
-  )
-}
-
-function QuickLink({ title, text, to, icon: Icon }: { title: string; text: string; to: string; icon: React.ComponentType<{ className?: string }> }) {
-  return (
-    <Link to={to} className="block rounded-md outline-none focus:ring-4 focus:ring-focus/8">
-      <Card className="h-full p-5 transition duration-200 hover:-translate-y-1 hover:shadow-md">
-        <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-md bg-focus/8">
-          <Icon className="h-5 w-5 text-focus" />
-        </div>
-        <h2 className="font-display text-base font-semibold text-deep">{title}</h2>
-        <p className="mt-2 text-sm leading-6 text-mid">{text}</p>
-      </Card>
-    </Link>
-  )
-}
+function MemberBar({ active, members, onSelect, onAdd }: { active: MemberResponse; members: MemberResponse[]; onSelect: (member: MemberResponse) => void; onAdd: () => void }) { return <section className="ml-auto w-full border-b border-line bg-surf md:w-4/5"><div className="flex min-h-[76px] w-full items-center gap-4 overflow-x-auto px-4 py-3 md:justify-end md:px-8">{members.map(member => { const isActive = member.memberId === active.memberId; return <div key={member.memberId} className={`flex min-h-12 shrink-0 items-center gap-2.5 rounded-md px-2.5 ${isActive ? 'border border-focus/35 bg-focus/8 pr-2' : 'hover:bg-bg'}`}><button onClick={() => onSelect(member)} className="flex items-center gap-2.5 text-left focus:outline-none"><Avatar name={member.fullName} photoUrl={member.profilePhotoUrl} size="sm" /><span><b className="block text-sm text-deep">{first(member.fullName)}</b><span className="text-xs text-mid">{member.dateOfBirth ? `${age(member.dateOfBirth)} yrs` : 'Member'}</span></span></button></div> })}<button onClick={onAdd} className="flex min-h-12 shrink-0 items-center gap-2.5 rounded-md px-2.5 text-sm font-medium text-deep hover:bg-bg"><span className="flex h-10 w-10 items-center justify-center rounded-full bg-focus/10 text-focus"><Plus size={21} /></span>Add member</button></div></section> }
+function Greeting({ name, date }: { name: string; date: Date }) { return <div className="mb-5 flex flex-wrap items-end justify-between gap-3"><div><h1 className="font-serif text-3xl font-bold tracking-tight text-deep md:text-4xl">Good morning, {first(name)}</h1><p className="mt-1 text-base text-mid">Here’s a quick look at your family’s health.</p></div><div className="inline-flex items-center gap-2 text-sm text-mid"><CalendarDays size={18} className="text-focus" />{date.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' })}</div></div> }
+function Profile({ member }: { member: MemberResponse }) { return <Card className="p-5 md:p-6"><div className="flex flex-wrap items-center justify-between gap-4"><div className="flex min-w-0 items-center gap-4"><Avatar name={member.fullName} photoUrl={member.profilePhotoUrl} size="lg" /><div><h2 className="font-serif text-2xl font-bold text-deep">{member.fullName}</h2><p className="mt-1 text-sm text-mid">{[member.dateOfBirth && `${age(member.dateOfBirth)} years`, member.gender, member.bloodGroup].filter(Boolean).join('  |  ') || 'Family member'}</p></div></div><Link to="/app/profile" className="inline-flex min-h-10 items-center gap-2 rounded-md border border-line px-3 text-sm font-semibold text-deep hover:bg-bg">Edit profile <Pencil size={16} /></Link></div><div className="mt-5 flex items-start gap-3 rounded-md bg-focus/5 px-4 py-3 text-sm leading-6 text-mid"><Leaf size={20} className="mt-0.5 shrink-0 text-focus" />Small steps today, a healthier tomorrow.</div></Card> }
+function Metric({ icon: Icon, label, value, detail, tone = 'focus' }: { icon: typeof FileText; label: string; value: number; detail: string; tone?: 'focus' | 'ok' | 'attn' }) { const colors = { focus: 'bg-focus/8 text-focus', ok: 'bg-ok/8 text-ok', attn: 'bg-attn/10 text-attn' }; return <Card className="p-4"><div className="flex justify-between"><span className={`flex h-11 w-11 items-center justify-center rounded-full ${colors[tone]}`}><Icon size={21} /></span><ChevronRight size={18} className="text-mid" /></div><p className="mt-3 text-sm font-medium text-mid">{label}</p><p className="tabular-nums mt-1 font-serif text-3xl font-bold text-deep">{value}</p><p className="mt-1 truncate text-xs text-mid">{detail}</p></Card> }
+function EventList({ title, events, empty }: { title: string; events: TimelineEventResponse[]; empty: string }) { return <Card className="overflow-hidden"><header className="flex items-center justify-between border-b border-line px-5 py-4"><h2 className="font-serif text-xl font-bold text-deep">{title}</h2><Link to="/app/timeline" className="text-sm font-semibold text-focus hover:underline">See all</Link></header>{events.length ? <div className="divide-y divide-line">{events.map(event => <Link key={event.id} to="/app/timeline" className="flex items-center gap-3 px-5 py-3 transition-colors hover:bg-bg"><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-focus/8 text-focus"><CalendarDays size={18} /></span><span className="min-w-0 flex-1"><b className="block truncate text-sm text-deep">{event.title}</b><span className="mt-0.5 block text-xs text-mid">{timelineEventLabel(event.eventType)} · {formatDate(event.eventDate)}</span></span><ChevronRight size={17} className="text-mid" /></Link>)}</div> : <p className="px-5 py-7 text-sm text-mid">{empty}</p>}</Card> }
+function LabResults({ parameters, date }: { parameters: ParameterResponse[]; date?: string }) { return <Card className="overflow-hidden"><header className="flex items-center justify-between border-b border-line px-5 py-4"><h2 className="font-serif text-xl font-bold text-deep">Recent lab results</h2><Link to="/app/insights" className="text-sm font-semibold text-focus hover:underline">See all</Link></header>{parameters.length ? <div className="overflow-x-auto"><table className="w-full min-w-[620px] text-left text-sm"><thead className="bg-bg text-xs font-semibold text-mid"><tr><th className="px-4 py-3">Test</th><th className="px-4 py-3">Value</th><th className="px-4 py-3">Reference range</th><th className="px-4 py-3">Date</th><th className="px-4 py-3">Status</th></tr></thead><tbody className="divide-y divide-line">{parameters.map(parameter => { const status = parameterStatus(parameter); return <tr key={parameter.parameterName} className={status === 'Normal' ? '' : status === 'Borderline' ? 'border-l-[3px] border-attn bg-attn/[0.03]' : 'border-l-[3px] border-alert bg-alert/[0.03]'}><td className="px-4 py-3 font-medium text-deep">{parameter.parameterName}</td><td className={`tabular-nums px-4 py-3 ${status === 'Low' || status === 'High' ? 'font-semibold text-alert' : 'text-deep'}`}>{parameter.value} <span className="text-xs font-normal text-mid">{parameter.unit}</span></td><td className="px-4 py-3 text-mid">{parameter.referenceRangeLow ?? '—'} – {parameter.referenceRangeHigh ?? '—'}</td><td className="px-4 py-3 text-mid">{date ? formatDate(date) : '—'}</td><td className={`px-4 py-3 font-medium ${status === 'Normal' ? 'text-ok' : status === 'Borderline' ? 'text-attn' : 'text-alert'}`}><span className="mr-2 inline-block h-2 w-2 rounded-full bg-current" />{status}</td></tr> })}</tbody></table></div> : <p className="px-5 py-7 text-sm text-mid">No extracted lab results yet.</p>}</Card> }
+function Trend({ trend, points, current, delta }: { trend: ParameterTrendResponse; points: Array<{ date: string; value: number; outOfRange: boolean }>; current: { date: string; value: number; outOfRange: boolean }; delta: number | null }) { const improving = delta !== null && delta < 0; return <Card className="overflow-hidden"><header className="flex justify-between border-b border-line px-5 py-4"><h2 className="font-serif text-xl font-bold text-deep">{trend.parameterName} trend</h2><Link to="/app/trends" className="text-focus"><ChevronRight size={19} /></Link></header><div className="px-5 pt-4"><div className="flex flex-wrap items-center justify-between gap-3"><p className="tabular-nums font-serif text-3xl font-bold text-deep">{current.value}<span className="ml-1 text-base font-normal">{trend.unit}</span></p>{delta !== null && <p className={`inline-flex items-center gap-1 text-sm font-medium ${improving ? 'text-ok' : 'text-attn'}`}>{improving ? <TrendingDown size={16} /> : <TrendingUp size={16} />}{Math.abs(delta).toFixed(1)} from last test</p>}</div></div><div className="h-52 px-3 pb-4 pt-2"><ResponsiveContainer width="100%" height="100%"><AreaChart data={points} margin={{ top: 12, right: 10, left: -20, bottom: 0 }}><defs><linearGradient id="dashboardTrendFill" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stopColor="var(--color-focus)" stopOpacity={0.2} /><stop offset="100%" stopColor="var(--color-focus)" stopOpacity={0} /></linearGradient></defs><CartesianGrid stroke="var(--color-line)" vertical={false} /><XAxis dataKey="date" tick={{ fontSize: 11, fill: 'var(--color-mid)' }} axisLine={false} tickLine={false} /><YAxis tick={{ fontSize: 11, fill: 'var(--color-mid)' }} axisLine={false} tickLine={false} /><Tooltip formatter={(value: number) => [`${value} ${trend.unit}`, trend.parameterName]} /><Area type="monotone" dataKey="value" stroke="var(--color-focus)" strokeWidth={2.5} fill="url(#dashboardTrendFill)" dot={({ cx, cy, index }) => <circle cx={cx} cy={cy} r={index === points.length - 1 && points[index].outOfRange ? 5 : 3.5} fill={index === points.length - 1 && points[index].outOfRange ? 'var(--color-attn)' : 'var(--color-focus)'} stroke="var(--color-surf)" strokeWidth={1.5} />} /></AreaChart></ResponsiveContainer></div></Card> }
+function Action() { return <Card className="p-5"><span className="flex h-11 w-11 items-center justify-center rounded-full bg-focus/8 text-focus"><FolderArchive size={22} /></span><h2 className="mt-4 font-serif text-xl font-bold text-deep">Documents</h2><p className="mt-1 text-sm leading-6 text-mid">Browse every report and keep the original record close at hand.</p><Link to="/app/vault" className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-md border border-line px-3 text-sm font-semibold text-deep hover:bg-bg">Open vault <ChevronRight size={16} /></Link></Card> }
+function Closing() { return <section className="relative overflow-hidden rounded-md border border-focus/15 bg-gradient-to-br from-focus/10 via-surf to-ok/10 p-5"><div className="absolute -bottom-12 -right-10 h-44 w-44 rounded-full bg-ok/10" /><div className="relative"><Leaf size={28} className="text-focus" /><h2 className="mt-4 font-serif text-xl font-bold text-deep">Your health journey matters.</h2><p className="mt-2 text-sm leading-6 text-mid">Keep your records updated for a healthier tomorrow—together.</p></div></section> }
+function age(value: string) { const birth = new Date(`${value}T00:00:00`), now = new Date(); return now.getFullYear() - birth.getFullYear() - Number(now.getMonth() < birth.getMonth() || (now.getMonth() === birth.getMonth() && now.getDate() < birth.getDate())) }
+function first(name: string) { return name.split(' ')[0] || name }
+function startOfDay(date: Date) { return new Date(date.getFullYear(), date.getMonth(), date.getDate()) }
+function outside(value: number, low?: number, high?: number) { return (low !== undefined && value < low) || (high !== undefined && value > high) }
+function parameterStatus(parameter: ParameterResponse) { if (parameter.referenceRangeLow === undefined || parameter.referenceRangeHigh === undefined) return 'Normal'; if (parameter.value < parameter.referenceRangeLow || parameter.value > parameter.referenceRangeHigh) { const range = parameter.referenceRangeHigh - parameter.referenceRangeLow; const distance = parameter.value < parameter.referenceRangeLow ? parameter.referenceRangeLow - parameter.value : parameter.value - parameter.referenceRangeHigh; return distance <= range * 0.15 ? 'Borderline' : parameter.value < parameter.referenceRangeLow ? 'Low' : 'High' } return 'Normal' }
