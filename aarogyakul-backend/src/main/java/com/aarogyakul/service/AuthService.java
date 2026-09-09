@@ -52,8 +52,15 @@ public class AuthService {
 
         FamilyMember member = new FamilyMember();
         member.family = family;
-        member.fullName = user.fullName.trim();
-        member.relationshipToOwner = "Self";
+        member.fullName = request.memberName() != null && !request.memberName().isBlank() 
+                ? request.memberName().trim() 
+                : user.fullName.trim();
+        member.relationshipToOwner = request.memberRelationship() != null && !request.memberRelationship().isBlank()
+                ? request.memberRelationship().trim()
+                : "Self";
+        member.dateOfBirth = request.memberDob();
+        member.gender = request.memberGender();
+        member.bloodGroup = request.memberBloodGroup();
         members.save(member);
 
         return toAuthResponse(user);

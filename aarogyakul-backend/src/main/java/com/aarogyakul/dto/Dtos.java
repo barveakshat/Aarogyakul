@@ -24,7 +24,12 @@ public final class Dtos {
             String password,
             @NotBlank(message = "Full name is required")
             String fullName,
-            String phoneNumber) {}
+            String phoneNumber,
+            String memberName,
+            LocalDate memberDob,
+            String memberGender,
+            String memberRelationship,
+            String memberBloodGroup) {}
 
     public record LoginRequest(
             @Email(message = "Please enter a valid email address")

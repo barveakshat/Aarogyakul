@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import * as authApi from '../api/auth'
+import { api } from '../api/client'
 import type { RegisterRequest, User } from '../types/api'
 import { DEMO_USER_ID } from '../demo/demoData'
 
@@ -8,7 +9,7 @@ interface AuthContextType {
   loading: boolean
   isDemo: boolean
   login: (email: string, password: string) => Promise<void>
-  register: (data: RegisterRequest) => Promise<void>
+  register: (data: RegisterRequest, photoFile?: File) => Promise<void>
   logout: () => void
   setSession: (user: User) => void
   enterDemo: () => void
@@ -63,9 +64,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     })
   }
 
-  const register = async (payload: RegisterRequest) => {
+  const register = async (payload: RegisterRequest, photoFile?: File) => {
     const response = await authApi.register(payload)
     localStorage.setItem('ak_token', response.accessToken)
+    
+    if (photoFile) {
+      try {
+        const familiesRes = await api.get('/api/families')
+        if (familiesRes.data && familiesRes.data.length > 0) {
+          const firstFamily = familiesRes.data[0]
+          if (firstFamily.members && firstFamily.members.length > 0) {
+            const memberId = firstFamily.members[0].memberId
+            const formData = new FormData()
+            formData.append('file', photoFile)
+            await api.post(`/api/members/${memberId}/photo`, formData, {
+              headers: { 'Content-Type': 'multipart/form-data' }
+            })
+          }
+        }
+      } catch (err) {
+        console.error('Failed to upload photo during registration', err)
+      }
+    }
+    
     localStorage.removeItem(DEMO_KEY)
     setIsDemo(false)
     setSession({

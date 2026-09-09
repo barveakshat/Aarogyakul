@@ -7,7 +7,7 @@ export function BrandMark({ compact = false }: { compact?: boolean }) {
       {!compact ? (
         <span className="min-w-0">
           <span className="block text-base font-bold tracking-tight text-deep">AarogyaKul</span>
-          <span className="block text-[11px] font-medium text-mid">Family health records</span>
+          <span className="block text-[11px] font-medium text-mid">Health records for every generation</span>
         </span>
       ) : null}
     </Link>

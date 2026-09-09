@@ -26,6 +26,11 @@ export interface LoginRequest {
 export interface RegisterRequest extends LoginRequest {
   fullName: string
   phoneNumber?: string
+  memberName?: string
+  memberDob?: string
+  memberGender?: string
+  memberRelationship?: string
+  memberBloodGroup?: string
 }
 
 export interface AuthUserResponse {
