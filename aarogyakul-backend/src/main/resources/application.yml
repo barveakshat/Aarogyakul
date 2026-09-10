@@ -51,7 +51,7 @@ tesseract:
 
 llm:
   connect-timeout-seconds: ${LLM_CONNECT_TIMEOUT:30}
-  read-timeout-seconds: ${LLM_READ_TIMEOUT:90}
+  read-timeout-seconds: ${LLM_READ_TIMEOUT:300}
 
 management:
   endpoints:

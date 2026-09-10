@@ -10,15 +10,15 @@ export function Button({
   ...props
 }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'primary' | 'secondary' | 'danger' | 'ghost' }) {
   const variants = {
-    primary: 'bg-focus text-white border-transparent hover:bg-focus/90 focus:ring-focus/20',
-    secondary: 'bg-surf text-focus border-line hover:bg-bg focus:ring-focus/15',
-    danger: 'bg-surf text-alert border-alert/30 hover:bg-alert/[0.04] focus:ring-alert/15',
-    ghost: 'bg-transparent text-mid border-transparent hover:bg-bg hover:text-deep focus:ring-focus/15',
+    primary: 'bg-focus text-white border-transparent hover:bg-focus/90 focus-visible:ring-focus/20',
+    secondary: 'bg-surf text-focus border-line hover:bg-bg focus-visible:ring-focus/15',
+    danger: 'bg-surf text-alert border-alert/30 hover:bg-alert/[0.04] focus-visible:ring-alert/15',
+    ghost: 'bg-transparent text-mid border-transparent hover:bg-bg hover:text-deep focus-visible:ring-focus/15',
   }
 
   return (
     <button
-      className={`inline-flex items-center justify-center gap-2 rounded-md border px-4 py-2 text-sm font-semibold transition duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${variants[variant]} ${className}`}
+      className={`inline-flex items-center justify-center gap-2 rounded-md border px-4 py-2 text-sm font-semibold transition duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${variants[variant]} ${className}`}
       {...props}
     >
       {children}
@@ -35,7 +35,7 @@ export function TextField({
     <label className="block">
       <span className="mb-1.5 block text-xs font-medium text-deep">{label}</span>
       <input
-        className={`w-full rounded-md border border-line bg-surf px-3 py-2 text-sm text-deep outline-none transition duration-150 placeholder:text-soft focus:border-focus focus:ring-2 focus:ring-focus/15 ${className}`}
+        className={`w-full rounded-md border border-line bg-surf px-3 py-2 text-sm text-deep outline-none transition duration-150 placeholder:text-soft focus:border-focus focus-visible:ring-2 focus-visible:ring-focus/15 ${className}`}
         {...props}
       />
     </label>
@@ -55,14 +55,14 @@ export function PasswordField({
       <div className="relative">
         <input
           type={visible ? 'text' : 'password'}
-          className={`w-full rounded-md border border-line bg-surf py-2 pl-3 pr-9 text-sm text-deep outline-none transition duration-150 placeholder:text-soft focus:border-focus focus:ring-2 focus:ring-focus/15 ${className}`}
+          className={`w-full rounded-md border border-line bg-surf py-2 pl-3 pr-9 text-sm text-deep outline-none transition duration-150 placeholder:text-soft focus:border-focus focus-visible:ring-2 focus-visible:ring-focus/15 ${className}`}
           {...props}
         />
         <button
           type="button"
           tabIndex={-1}
           onClick={() => setVisible(v => !v)}
-          className="absolute right-2 top-1/2 -translate-y-1/2 flex h-6 w-6 items-center justify-center rounded-sm text-mid transition-colors hover:text-deep"
+          className="absolute right-2 top-1/2 -translate-y-1/2 flex h-6 w-6 items-center justify-center rounded-sm text-mid transition-colors hover:text-deep focus:outline-none focus-visible:ring-2 focus-visible:ring-focus/15 focus-visible:ring-offset-1"
           aria-label={visible ? 'Hide password' : 'Show password'}
         >
           {visible ? <EyeOff size={15} /> : <Eye size={15} />}
@@ -83,7 +83,7 @@ export function SelectField({
     <label className="block">
       <span className="mb-1.5 block text-xs font-medium text-deep">{label}</span>
       <select
-        className={`w-full rounded-md border border-line bg-surf px-3 py-2 text-sm text-deep outline-none transition duration-150 focus:border-focus focus:ring-2 focus:ring-focus/15 ${className}`}
+        className={`w-full rounded-md border border-line bg-surf px-3 py-2 text-sm text-deep outline-none transition duration-150 focus:border-focus focus-visible:ring-2 focus-visible:ring-focus/15 ${className}`}
         {...props}
       >
         {children}
@@ -101,7 +101,7 @@ export function TextAreaField({
     <label className="block">
       <span className="mb-1.5 block text-xs font-medium text-deep">{label}</span>
       <textarea
-        className={`min-h-24 w-full resize-y rounded-md border border-line bg-surf px-3 py-2 text-sm text-deep outline-none transition duration-150 placeholder:text-soft focus:border-focus focus:ring-2 focus:ring-focus/15 ${className}`}
+        className={`min-h-24 w-full resize-y rounded-md border border-line bg-surf px-3 py-2 text-sm text-deep outline-none transition duration-150 placeholder:text-soft focus:border-focus focus-visible:ring-2 focus-visible:ring-focus/15 ${className}`}
         {...props}
       />
     </label>

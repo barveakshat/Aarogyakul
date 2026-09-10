@@ -65,6 +65,7 @@ public class DocumentProcessingService {
     @Async("aiTaskExecutor")
     public void process(UUID documentId, Path tempPdf) {
         Timer.Sample timerSample = Timer.start(meterRegistry);
+        String currentStageKey = ProcessingStageEvent.EXTRACTING_TEXT;
         try {
             log.info("Starting AI pipeline for document {}", documentId);
             statusService.markProcessing(documentId);
@@ -72,11 +73,13 @@ public class DocumentProcessingService {
             MedicalDocument document = documents.findById(documentId).orElseThrow();
 
             log.info("Stage 1/5: Extracting text from PDF for document {}", documentId);
-            publishStage(documentId, ProcessingStageEvent.EXTRACTING_TEXT, "Reading your PDF...");
+            currentStageKey = ProcessingStageEvent.EXTRACTING_TEXT;
+            publishStage(documentId, currentStageKey, "Reading your PDF...");
             String text = ocrService.extractText(tempPdf);
 
             log.info("Stage 2/5: Extracting parameters via LLM for document {}", documentId);
-            publishStage(documentId, ProcessingStageEvent.IDENTIFYING_PARAMETERS, "Identifying lab parameters...");
+            currentStageKey = ProcessingStageEvent.IDENTIFYING_PARAMETERS;
+            publishStage(documentId, currentStageKey, "Identifying lab parameters...");
             ExtractedReport report = extractionService.extract(text);
             LocalDate reportDate = report.reportDate() == null ? LocalDate.now() : report.reportDate();
             document.reportDate = reportDate;
@@ -114,11 +117,13 @@ public class DocumentProcessingService {
             log.info("Stage 3/5: Extracted {} parameters for document {}", saved.size(), documentId);
 
             log.info("Stage 4/5: Comparing with historical values for document {}", documentId);
-            publishStage(documentId, ProcessingStageEvent.COMPARING_HISTORY, "Comparing with previous results...");
+            currentStageKey = ProcessingStageEvent.COMPARING_HISTORY;
+            publishStage(documentId, currentStageKey, "Comparing with previous results...");
             List<ComparisonData> comparisons = comparisonService.compare(saved);
 
             log.info("Stage 5/5: Generating AI summary for document {}", documentId);
-            publishStage(documentId, ProcessingStageEvent.GENERATING_SUMMARY, "Writing your health summary...");
+            currentStageKey = ProcessingStageEvent.GENERATING_SUMMARY;
+            publishStage(documentId, currentStageKey, "Writing your health summary...");
             AiInsight insight = new AiInsight();
             insight.document = document;
             insight.familyMember = document.familyMember;
@@ -130,13 +135,14 @@ public class DocumentProcessingService {
             documents.save(document);
             statusService.markCompleted(documentId);
             createTimelineEvent(document, saved);
-            publishStage(documentId, ProcessingStageEvent.COMPLETED, "Your results are ready!");
+            currentStageKey = ProcessingStageEvent.COMPLETED;
+            publishStage(documentId, currentStageKey, "Your results are ready!");
             log.info("AI pipeline COMPLETED for document {} — {} parameters extracted", documentId, saved.size());
             timerSample.stop(Timer.builder("aarogyakul.ai.pipeline.duration")
                     .tag("status", "success").register(meterRegistry));
         } catch (Exception e) {
             log.error("AI pipeline FAILED for document {}: {}", documentId, e.getMessage(), e);
-            statusService.markFailed(documentId, e.getMessage());
+            statusService.markFailed(documentId, currentStageKey + "|" + e.getMessage());
             publishStage(documentId, ProcessingStageEvent.FAILED, e.getMessage() != null ? e.getMessage() : "Processing failed");
             meterRegistry.counter("aarogyakul.ai.pipeline.failures").increment();
             timerSample.stop(Timer.builder("aarogyakul.ai.pipeline.duration")

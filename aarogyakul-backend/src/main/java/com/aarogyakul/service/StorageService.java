@@ -7,4 +7,5 @@ public interface StorageService {
     String put(String key, Path file, String contentType);
     String presignedUrl(String key, Duration duration);
     void delete(String key);
+    Path downloadToTemp(String key);
 }

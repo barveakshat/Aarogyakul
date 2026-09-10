@@ -26,6 +26,7 @@ public class DocumentStatusController {
     private static final long SSE_TIMEOUT = 120_000L;
 
     private final Map<UUID, List<SseEmitter>> emitters = new ConcurrentHashMap<>();
+    private final Map<UUID, ProcessingStageEvent> lastStages = new ConcurrentHashMap<>();
     private final MedicalDocumentRepository documents;
     private final CurrentUser currentUser;
 
@@ -44,6 +45,20 @@ public class DocumentStatusController {
         SseEmitter emitter = new SseEmitter(SSE_TIMEOUT);
         emitters.computeIfAbsent(documentId, k -> Collections.synchronizedList(new ArrayList<>())).add(emitter);
 
+        ProcessingStageEvent lastStage = lastStages.get(documentId);
+        if (lastStage != null) {
+            try {
+                emitter.send(SseEmitter.event()
+                        .name("stage")
+                        .data(Map.of(
+                                "stage", lastStage.stage(),
+                                "message", lastStage.message()
+                        )));
+            } catch (IOException e) {
+                // Ignore, the cleanup handler will remove it
+            }
+        }
+
         Runnable cleanup = () -> {
             List<SseEmitter> list = emitters.get(documentId);
             if (list != null) {
@@ -61,6 +76,12 @@ public class DocumentStatusController {
 
     @EventListener
     public void onProcessingStage(ProcessingStageEvent event) {
+        if (ProcessingStageEvent.COMPLETED.equals(event.stage()) || ProcessingStageEvent.FAILED.equals(event.stage())) {
+            lastStages.remove(event.documentId());
+        } else {
+            lastStages.put(event.documentId(), event);
+        }
+
         List<SseEmitter> list = emitters.get(event.documentId());
         if (list == null || list.isEmpty()) return;
 

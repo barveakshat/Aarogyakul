@@ -44,4 +44,9 @@ public class DocumentController {
     public void delete(@PathVariable UUID documentId) {
         documentService.delete(documentId, currentUser.id());
     }
+
+    @PostMapping("/api/documents/{documentId}/retry")
+    public DocumentUploadResponse retry(@PathVariable UUID documentId) {
+        return documentService.retry(documentId, currentUser.id());
+    }
 }

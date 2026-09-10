@@ -1,5 +1,6 @@
 package com.aarogyakul.service;
 
+import com.aarogyakul.exception.ApiException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
@@ -8,6 +9,7 @@ import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.*;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 
@@ -46,5 +48,16 @@ public class S3StorageService implements StorageService {
     @Override
     public void delete(String key) {
         s3.deleteObject(DeleteObjectRequest.builder().bucket(bucket).key(key).build());
+    }
+
+    @Override
+    public Path downloadToTemp(String key) {
+        try {
+            Path temp = Files.createTempFile("aarogyakul-download-", ".pdf");
+            s3.getObject(GetObjectRequest.builder().bucket(bucket).key(key).build(), temp);
+            return temp;
+        } catch (Exception e) {
+            throw ApiException.processing("Could not download document from S3");
+        }
     }
 }

@@ -43,4 +43,23 @@ public class LocalStorageService implements StorageService {
         } catch (Exception ignored) {
         }
     }
+
+    @Override
+    public Path downloadToTemp(String key) {
+        try {
+            Path target = root.resolve(key).normalize();
+            if (!target.startsWith(root.normalize())) {
+                throw ApiException.validation("Invalid storage key");
+            }
+            if (!Files.exists(target)) {
+                throw ApiException.notFound("File not found in storage");
+            }
+            Path temp = Files.createTempFile("aarogyakul-download-", ".pdf");
+            Files.copy(target, temp, StandardCopyOption.REPLACE_EXISTING);
+            return temp;
+        } catch (Exception e) {
+            if (e instanceof ApiException) throw (ApiException) e;
+            throw ApiException.processing("Could not download document");
+        }
+    }
 }

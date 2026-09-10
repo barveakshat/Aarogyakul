@@ -10,6 +10,7 @@ import {
   Play,
   ShieldCheck,
   Upload,
+  ArrowDown,
 } from 'lucide-react'
 
 const normalParameters = [
@@ -37,11 +38,11 @@ export default function LandingPage() {
             <span className="font-display text-base font-bold tracking-tight">AarogyaKul</span>
           </Link>
           <nav className="flex items-center gap-2 sm:gap-5" aria-label="Primary navigation">
-            <a href="#how-it-works" className="hidden min-h-11 items-center px-2 text-sm font-medium text-mid transition-colors hover:text-deep sm:inline-flex">
+            <a href="#how-it-works" className="hidden min-h-11 items-center px-2 text-sm font-medium text-mid transition-colors hover:text-deep sm:inline-flex focus:outline-none focus-visible:ring-2 focus-visible:ring-focus rounded-sm">
               How it works
             </a>
-            {!user && <Link to="/login" className="hidden min-h-11 items-center px-3 text-sm font-semibold text-mid sm:inline-flex">Sign in</Link>}
-            {user && <Link to="/app" className="inline-flex min-h-11 items-center gap-2 rounded-md bg-focus px-4 text-sm font-semibold text-white">Dashboard <ArrowRight size={15} /></Link>}
+            {!user && <Link to="/login" className="hidden min-h-11 items-center px-3 text-sm font-semibold text-mid sm:inline-flex focus:outline-none focus-visible:ring-2 focus-visible:ring-focus rounded-sm">Sign in</Link>}
+            {user && <Link to="/app" className="inline-flex min-h-11 items-center gap-2 rounded-md bg-focus px-4 text-sm font-semibold text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2">Dashboard <ArrowRight size={15} /></Link>}
           </nav>
         </div>
       </header>
@@ -62,11 +63,11 @@ export default function LandingPage() {
               </p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                 {!user && (
-                  <Link to="/app" onClick={enterDemo} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-md bg-focus px-5 text-sm font-semibold text-white">
+                  <Link to="/app" onClick={enterDemo} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-md bg-focus px-5 text-sm font-semibold text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2">
                     <Play size={16} aria-hidden="true" /> View Live Demo
                   </Link>
                 )}
-                <Link to={primaryHref} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-md border border-line bg-surf px-5 text-sm font-semibold text-deep">
+                <Link to={primaryHref} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-md border border-line bg-surf px-5 text-sm font-semibold text-deep focus:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2">
                   {primaryLabel} <ArrowRight size={16} />
                 </Link>
               </div>
@@ -141,7 +142,7 @@ export default function LandingPage() {
               <h2 className="font-display text-3xl font-bold leading-tight tracking-[-0.02em] sm:text-4xl">Start with the report you already have.</h2>
               <p className="mt-4 text-sm leading-7 text-soft">Create a family workspace and make the next report easier to understand.</p>
             </div>
-            <Link to={primaryHref} className="inline-flex min-h-12 shrink-0 items-center justify-center gap-2 rounded-md bg-focus px-5 text-sm font-semibold text-white">
+            <Link to={primaryHref} className="inline-flex min-h-12 shrink-0 items-center justify-center gap-2 rounded-md bg-focus px-5 text-sm font-semibold text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-deep">
               {primaryLabel} <ArrowRight size={16} />
             </Link>
           </div>
@@ -160,7 +161,7 @@ export default function LandingPage() {
 
 function ReportReader() {
   return (
-    <div className="animate-enter relative mx-auto w-full max-w-xl" aria-label="Example of an analyzed blood report">
+    <div className="motion-safe:animate-enter relative mx-auto w-full max-w-xl" aria-label="Example of an analyzed blood report">
       <div className="overflow-hidden rounded-lg border border-line bg-surf shadow-lg">
         <div className="flex items-center justify-between border-b border-line bg-deep px-5 py-4 text-white sm:px-6">
           <div className="flex min-w-0 items-center gap-3">
@@ -178,7 +179,7 @@ function ReportReader() {
           <div className="mt-5 border-l-[3px] border-alert bg-alert/4 px-4 py-4">
             <div className="flex items-center justify-between gap-3">
               <div><p className="text-xs font-semibold text-alert">Needs attention</p><h3 className="mt-2 font-display text-lg font-semibold text-deep">Vitamin D</h3></div>
-              <div className="text-right"><p className="tabular-nums text-2xl font-semibold text-deep">18 <span className="text-xs font-normal text-mid">ng/mL</span></p><p className="mt-1 text-xs font-medium text-alert">Low, high confidence</p></div>
+              <div className="text-right"><p className="tabular-nums text-2xl font-semibold text-deep">18 <span className="text-xs font-normal text-mid">ng/mL</span></p><p className="mt-1 flex items-center justify-end gap-1 text-xs font-medium text-alert"><ArrowDown size={14} strokeWidth={3} />Low, high confidence</p></div>
             </div>
             <div className="mt-5">
               <div className="relative h-2 rounded-sm bg-line"><div className="absolute left-[30%] right-0 h-2 rounded-r-sm bg-ok/25" /><div className="absolute left-[18%] top-[-3px] h-3.5 w-3.5 rounded-full border-2 border-surf bg-alert" /></div>

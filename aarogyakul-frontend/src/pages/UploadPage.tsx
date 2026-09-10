@@ -1,10 +1,10 @@
 import { FormEvent, useEffect, useState, useCallback } from 'react'
 import { useSearchParams } from 'react-router'
-import { getDocument, listDocuments, uploadDocument } from '../api/documents'
+import { getDocument, listDocuments, uploadDocument, retryDocument } from '../api/documents'
 import { Alert, Button, Card, EmptyState, LoadingState, PageHeader, SelectField, StatusBadge } from '../components/ui'
 import type { DocumentResponse, DocumentSummaryResponse, DocumentType, ParameterResponse } from '../types/api'
 import { documentTypeLabel, formatDate, formatDateTime } from '../utils/format'
-import { Plus, X } from 'lucide-react'
+import { AlertCircle, Plus, RefreshCw, X } from 'lucide-react'
 import { useProfile } from '../context/ProfileContext'
 import { isDemoMode } from '../demo/demoApi'
 
@@ -25,13 +25,13 @@ export default function UploadPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const [documents, setDocuments] = useState<DocumentSummaryResponse[]>([])
   const [selectedDocument, setSelectedDocument] = useState<DocumentResponse | null>(null)
+  const [retryingListId, setRetryingListId] = useState<string | null>(null)
   const [documentType, setDocumentType] = useState<DocumentType>('BLOOD_REPORT')
   const [file, setFile] = useState<File | null>(null)
   const [loading, setLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState('')
   const [showUploadModal, setShowUploadModal] = useState(false)
-  const [processingStage, setProcessingStage] = useState<{ stage: string; message: string } | null>(null)
 
   const selectedDocumentId = searchParams.get('document')
 
@@ -59,50 +59,18 @@ export default function UploadPage() {
     void getDocument(selectedDocumentId).then(setSelectedDocument).catch((err) => setError(err instanceof Error ? err.message : 'Could not load document'))
   }, [selectedDocumentId])
 
-  // SSE for real-time processing updates, fallback to polling
+  // Poll list if there are pending/processing documents
+  const hasProcessingDocs = documents.some((doc) => doc.processingStatus === 'PENDING' || doc.processingStatus === 'PROCESSING')
+
   useEffect(() => {
-    const activeDoc = documents.find((doc) => doc.processingStatus === 'PENDING' || doc.processingStatus === 'PROCESSING')
-    if (!activeDoc) {
-      setProcessingStage(null)
-      return
-    }
+    if (!hasProcessingDocs) return
 
-    const apiBase = import.meta.env.VITE_API_BASE_URL || ''
-    const sseUrl = `${apiBase}/api/documents/${activeDoc.documentId}/status-stream`
+    const backgroundPoll = window.setInterval(() => {
+      void load()
+    }, 5000)
 
-    let eventSource: EventSource | null = null
-    let fallbackTimer: number | null = null
-
-    try {
-      eventSource = new EventSource(sseUrl, { withCredentials: true })
-
-      eventSource.addEventListener('stage', (event) => {
-        const data = JSON.parse(event.data)
-        setProcessingStage(data)
-        if (data.stage === 'COMPLETED' || data.stage === 'FAILED') {
-          void load()
-          if (selectedDocumentId === activeDoc.documentId) {
-            void getDocument(activeDoc.documentId).then(setSelectedDocument)
-          }
-        }
-      })
-
-      eventSource.onerror = () => {
-        // SSE failed — fallback to polling
-        eventSource?.close()
-        eventSource = null
-        fallbackTimer = window.setInterval(() => void load(), 5000)
-      }
-    } catch {
-      // EventSource not supported — fallback to polling
-      fallbackTimer = window.setInterval(() => void load(), 5000)
-    }
-
-    return () => {
-      eventSource?.close()
-      if (fallbackTimer) window.clearInterval(fallbackTimer)
-    }
-  }, [documents, load, selectedDocumentId])
+    return () => window.clearInterval(backgroundPoll)
+  }, [hasProcessingDocs, load])
 
   const handleUpload = async (event: FormEvent) => {
     event.preventDefault()
@@ -140,6 +108,20 @@ export default function UploadPage() {
     }
   }
 
+  const handleRetryList = async (documentId: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    setRetryingListId(documentId)
+    setError('')
+    try {
+      await retryDocument(documentId)
+      await load()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Retry failed')
+    } finally {
+      setRetryingListId(null)
+    }
+  }
+
   if (loading) return <LoadingState label="Loading documents" />
 
   return (
@@ -158,33 +140,6 @@ export default function UploadPage() {
       />
       {error ? <div className="mb-4"><Alert message={error} /></div> : null}
 
-      {/* ─── PROCESSING STEPPER ─── */}
-      {processingStage && processingStage.stage !== 'COMPLETED' && processingStage.stage !== 'FAILED' && (
-        <div className="mb-6 rounded-md border border-focus/20 bg-focus/5 p-5">
-          <h4 className="text-sm font-semibold text-deep mb-4">
-            AI is analyzing your report...
-          </h4>
-          <div className="flex items-center gap-1">
-            {PIPELINE_STAGES.map((stage, i) => {
-              const currentIndex = PIPELINE_STAGES.findIndex(s => s.key === processingStage.stage)
-              const isDone = i < currentIndex
-              const isCurrent = i === currentIndex
-              return (
-                <div key={stage.key} className="flex-1 flex flex-col items-center gap-1.5">
-                  <div className={`h-1.5 w-full rounded-full transition-all duration-500 ${
-                    isDone ? 'bg-ok' : isCurrent ? 'bg-focus' : 'bg-line'
-                  }`} />
-                  <span className={`text-[10px] font-medium text-center leading-tight ${
-                    isCurrent ? 'text-focus font-semibold' : isDone ? 'text-ok' : 'text-mid'
-                  }`}>{stage.label}</span>
-                </div>
-              )
-            })}
-          </div>
-          <p className="mt-3 text-xs text-mid">{processingStage.message}</p>
-        </div>
-      )}
-
       {/* Document list */}
       {documents.length === 0 ? (
         <EmptyState title="No documents yet" description="Click the + Upload button above to upload your first medical document." />
@@ -201,7 +156,19 @@ export default function UploadPage() {
               >
                 <div className="flex items-start justify-between gap-2 mb-1.5">
                   <h3 className="truncate text-sm font-semibold text-deep">{doc.fileName}</h3>
-                  <StatusBadge status={doc.processingStatus} />
+                  <div className="flex items-center gap-2">
+                    <StatusBadge status={doc.processingStatus} />
+                    {doc.processingStatus === 'FAILED' && (
+                      <button
+                        onClick={(e) => handleRetryList(doc.documentId, e)}
+                        disabled={retryingListId === doc.documentId}
+                        className="rounded-full p-1 text-mid hover:bg-line/50 hover:text-focus transition-colors disabled:opacity-50"
+                        title="Retry processing"
+                      >
+                        <RefreshCw size={14} className={retryingListId === doc.documentId ? 'animate-spin text-focus' : ''} />
+                      </button>
+                    )}
+                  </div>
                 </div>
                 <div className="flex items-center gap-2 text-xs text-mid">
                   <span>{documentTypeLabel(doc.documentType)}</span>
@@ -214,7 +181,15 @@ export default function UploadPage() {
         </Card>
       )}
 
-      {selectedDocument ? <DocumentDetail document={selectedDocument} /> : null}
+      {selectedDocument ? (
+        <DocumentDetail 
+          document={selectedDocument} 
+          onRefresh={() => {
+            void load()
+            void getDocument(selectedDocument.documentId).then(setSelectedDocument).catch(() => {})
+          }} 
+        />
+      ) : null}
 
       {/* Upload Modal */}
       {showUploadModal && (
@@ -250,7 +225,64 @@ export default function UploadPage() {
   )
 }
 
-function DocumentDetail({ document }: { document: DocumentResponse }) {
+function DocumentDetail({ document, onRefresh }: { document: DocumentResponse; onRefresh: () => void }) {
+  const [retrying, setRetrying] = useState(false)
+  const [retryError, setRetryError] = useState('')
+  const [processingStage, setProcessingStage] = useState<{ stage: string; message: string } | null>(null)
+
+  useEffect(() => {
+    if (document.processingStatus !== 'PENDING' && document.processingStatus !== 'PROCESSING') {
+      return
+    }
+
+    const apiBase = import.meta.env.VITE_API_BASE_URL || ''
+    const sseUrl = `${apiBase}/api/documents/${document.documentId}/status-stream`
+    
+    let eventSource: EventSource | null = null
+
+    try {
+      eventSource = new EventSource(sseUrl, { withCredentials: true })
+
+      eventSource.addEventListener('stage', (event) => {
+        const data = JSON.parse(event.data)
+        setProcessingStage(data)
+        if (data.stage === 'COMPLETED' || data.stage === 'FAILED') {
+          onRefresh()
+        }
+      })
+
+      eventSource.onerror = () => {
+        eventSource?.close()
+        eventSource = null
+      }
+    } catch {
+      // ignore
+    }
+
+    // Fallback polling for this specific document
+    const poll = window.setInterval(() => {
+      onRefresh()
+    }, 5000)
+
+    return () => {
+      eventSource?.close()
+      window.clearInterval(poll)
+    }
+  }, [document.documentId, document.processingStatus, onRefresh])
+
+  const handleRetry = async () => {
+    setRetrying(true)
+    setRetryError('')
+    try {
+      await retryDocument(document.documentId)
+      onRefresh()
+    } catch (err) {
+      setRetryError(err instanceof Error ? err.message : 'Retry failed')
+    } finally {
+      setRetrying(false)
+    }
+  }
+
   const summaryText = document.insight?.summaryText || ''
   const categorized = document.parameters.map(parameterWithStatus)
 
@@ -258,6 +290,125 @@ function DocumentDetail({ document }: { document: DocumentResponse }) {
   const routineParameters = categorized.filter((p) => p.status === 'normal' || p.status === 'unknown')
   const normalCount = categorized.filter((p) => p.status === 'normal').length
   const totalWithRange = categorized.filter((p) => p.status !== 'unknown').length
+
+  if (document.processingStatus === 'PENDING' || document.processingStatus === 'PROCESSING') {
+    return (
+      <Card className="overflow-hidden">
+        <div className="flex flex-col gap-3 border-b border-line px-5 py-4 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h2 className="text-base font-semibold text-deep">{document.fileName}</h2>
+            <p className="mt-1 text-sm text-mid">{documentTypeLabel(document.documentType)} · Report date {formatDate(document.reportDate)}</p>
+          </div>
+          <StatusBadge status={document.processingStatus} />
+        </div>
+        <div className="p-5 sm:p-6">
+          <div className="mb-6 rounded-md border border-focus/20 bg-focus/5 p-6 shadow-sm">
+            <div className="flex items-center gap-3 mb-5">
+              <RefreshCw className="h-5 w-5 animate-spin text-focus" />
+              <h3 className="text-sm font-semibold text-deep">
+                AI is analyzing your report...
+              </h3>
+            </div>
+            
+            <div className="flex items-center gap-1 mb-4">
+              {PIPELINE_STAGES.map((stage, i) => {
+                const currentIndex = processingStage ? PIPELINE_STAGES.findIndex(s => s.key === processingStage.stage) : 0
+                const isDone = i < currentIndex
+                const isCurrent = i === currentIndex
+                return (
+                  <div key={stage.key} className="flex-1 flex flex-col items-center gap-1.5">
+                    <div className={`h-1.5 w-full rounded-full transition-all duration-500 ${
+                      isDone ? 'bg-ok' : isCurrent ? 'bg-focus' : 'bg-line'
+                    }`} />
+                    <span className={`text-[10px] font-medium text-center leading-tight ${
+                      isCurrent ? 'text-focus font-semibold' : isDone ? 'text-ok' : 'text-mid'
+                    }`}>{stage.label}</span>
+                  </div>
+                )
+              })}
+            </div>
+            
+            <p className="text-sm font-medium text-deep">
+              {processingStage ? processingStage.message : 'Warming up AI engine...'}
+            </p>
+            <p className="mt-4 text-xs text-mid">
+              This process typically takes 1 to 3 minutes depending on the report length. 
+              <strong> You can safely leave this page or close the tab</strong>; your results will be waiting for you when you return.
+            </p>
+          </div>
+        </div>
+      </Card>
+    )
+  }
+
+  if (document.processingStatus === 'FAILED') {
+    const errorParts = (document.processingError || '').split('|')
+    const failedStageKey = errorParts.length > 1 ? errorParts[0] : null
+    const errorMessage = errorParts.length > 1 ? errorParts.slice(1).join('|') : document.processingError
+
+    return (
+      <Card className="overflow-hidden">
+        <div className="flex flex-col gap-3 border-b border-line px-5 py-4 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h2 className="text-base font-semibold text-deep">{document.fileName}</h2>
+            <p className="mt-1 text-sm text-mid">{documentTypeLabel(document.documentType)} · Report date {formatDate(document.reportDate)}</p>
+          </div>
+          <StatusBadge status={document.processingStatus} />
+        </div>
+        <div className="p-5 sm:p-6">
+          <div className="rounded-md border border-alert/20 bg-alert/5 p-6 shadow-sm text-center">
+            <div className="flex items-center justify-center gap-3 mb-5">
+              <AlertCircle className="h-5 w-5 text-alert" />
+              <h3 className="text-sm font-semibold text-alert">
+                AI processing failed
+              </h3>
+            </div>
+            
+            {failedStageKey && (
+              <div className="flex items-center gap-1 mb-6">
+                {PIPELINE_STAGES.map((stage, i) => {
+                  const currentIndex = PIPELINE_STAGES.findIndex(s => s.key === failedStageKey)
+                  const isDone = i < currentIndex
+                  const isCurrent = i === currentIndex
+                  return (
+                    <div key={stage.key} className="flex-1 flex flex-col items-center gap-1.5">
+                      <div className={`h-1.5 w-full rounded-full transition-all duration-500 ${
+                        isDone ? 'bg-ok' : isCurrent ? 'bg-alert shadow-[0_0_8px_rgba(239,68,68,0.4)]' : 'bg-line/50'
+                      }`} />
+                      <span className={`text-[10px] font-medium text-center leading-tight ${
+                        isCurrent ? 'text-alert font-bold' : isDone ? 'text-ok' : 'text-mid'
+                      }`}>{stage.label}</span>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+
+            <p className="mx-auto mb-4 max-w-sm text-sm text-deep font-medium">
+              We couldn't fully process this document. You can try uploading a clearer scan, or try again.
+            </p>
+            {errorMessage && (
+              <div className="mx-auto mb-5 max-w-md rounded-md bg-surf px-4 py-3 text-left text-xs font-medium text-mid border border-alert/20 shadow-sm">
+                <strong className="text-alert block mb-1">Backend Error Details</strong>
+                {errorMessage}
+              </div>
+            )}
+            {retryError ? <div className="mb-4 text-left"><Alert message={retryError} /></div> : null}
+            <div className="flex justify-center mt-2">
+              <button
+                onClick={handleRetry}
+                disabled={retrying}
+                className="inline-flex items-center justify-center gap-2 rounded-md border border-line bg-surf px-4 py-2 text-sm font-semibold text-focus shadow-sm transition-colors hover:bg-bg disabled:opacity-50"
+              >
+                {retrying ? <RefreshCw className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                {retrying ? 'Restarting...' : 'Retry Processing'}
+              </button>
+            </div>
+          </div>
+        </div>
+      </Card>
+    )
+  }
 
   return (
     <Card className="overflow-hidden">
@@ -269,7 +420,7 @@ function DocumentDetail({ document }: { document: DocumentResponse }) {
         <StatusBadge status={document.processingStatus} />
       </div>
 
-      {document.processingError ? <div className="px-5 pt-4"><Alert message={document.processingError} /></div> : null}
+
 
       <div className="space-y-8 p-5 sm:p-6">
         {totalWithRange > 0 && (

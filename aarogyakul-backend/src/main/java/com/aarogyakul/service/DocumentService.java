@@ -114,6 +114,44 @@ public class DocumentService {
         documents.save(document);
     }
 
+    @Transactional
+    public DocumentUploadResponse retry(UUID documentId, UUID userId) {
+        MedicalDocument document = requireOwnedDocument(documentId, userId);
+        if (document.processingStatus != ProcessingStatus.FAILED) {
+            throw ApiException.validation("Only failed documents can be retried");
+        }
+
+        // Delete any existing parameters or insights from previous partial runs
+        timelineEvents.deleteByRelatedDocumentId(document.id);
+        insights.deleteByDocumentId(document.id);
+        parameters.deleteByDocumentId(document.id);
+
+        document.retryCount = 0;
+        document.processingStatus = ProcessingStatus.PENDING;
+        document.processingError = null;
+        documents.save(document);
+
+        Path temp;
+        try {
+            temp = storage.downloadToTemp(document.fileUrl);
+        } catch (Exception e) {
+            throw ApiException.processing("Could not retrieve document for retry");
+        }
+
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    processingService.process(documentId, temp);
+                }
+            });
+        } else {
+            processingService.process(documentId, temp);
+        }
+
+        return new DocumentUploadResponse(document.id, document.fileName, document.documentType, document.processingStatus, document.uploadedAt);
+    }
+
     public MedicalDocument requireOwnedDocument(UUID documentId, UUID userId) {
         return documents.findByIdAndFamilyMemberFamilyOwnerId(documentId, userId)
                 .orElseThrow(() -> ApiException.notFound("Document not found"));

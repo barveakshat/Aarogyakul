@@ -6,6 +6,7 @@ import { Card, EmptyState, LoadingState, PageHeader } from '../components/ui'
 import type { DocumentSummaryResponse } from '../types/api'
 import { documentTypeLabel, formatDate } from '../utils/format'
 import { useEffect } from 'react'
+import { AlertCircle, AlertTriangle, Info } from 'lucide-react'
 
 export function InsightsPage() {
   const { activeProfile } = useProfile()
@@ -36,7 +37,7 @@ export function InsightsPage() {
               <div className="mb-4 h-1.5 rounded-full bg-focus" />
               <h2 className="font-display text-base font-semibold text-deep">{doc.fileName}</h2>
               <p className="mt-2 text-sm leading-6 text-mid">{documentTypeLabel(doc.documentType)} · {formatDate(doc.reportDate)}</p>
-              <Link className="mt-5 inline-flex rounded-md bg-focus px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-focus/90" to={`/app/insights?document=${doc.documentId}`}>
+              <Link className="mt-5 inline-flex rounded-md bg-focus px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-focus/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2" to={`/app/insights?document=${doc.documentId}`}>
                 Review insight
               </Link>
             </Card>
@@ -73,11 +74,16 @@ export function ClinicalPage() {
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-semibold text-deep">{a.allergen}</span>
                     {a.severity && (
-                      <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
+                      <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ${
                         a.severity === 'SEVERE' ? 'bg-alert/10 text-alert' :
                         a.severity === 'MODERATE' ? 'bg-attn/10 text-attn' :
                         'bg-ok/10 text-ok'
-                      }`}>{a.severity.charAt(0) + a.severity.slice(1).toLowerCase()}</span>
+                      }`}>
+                        {a.severity === 'SEVERE' ? <AlertTriangle size={12} strokeWidth={3} /> :
+                         a.severity === 'MODERATE' ? <AlertCircle size={12} strokeWidth={3} /> :
+                         <Info size={12} strokeWidth={3} />}
+                        {a.severity.charAt(0) + a.severity.slice(1).toLowerCase()}
+                      </span>
                     )}
                   </div>
                   {a.notes && <p className="mt-1 text-xs leading-relaxed text-mid">{a.notes}</p>}
@@ -85,7 +91,7 @@ export function ClinicalPage() {
               ))}
             </ul>
           )}
-          <Link to="/app/profile" className="mt-4 inline-flex text-sm font-semibold text-focus hover:underline">Manage in profile →</Link>
+          <Link to="/app/profile" className="mt-4 inline-flex text-sm font-semibold text-focus hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-focus rounded-sm">Manage in profile →</Link>
         </Card>
 
         <Card className="p-5">
@@ -109,7 +115,7 @@ export function ClinicalPage() {
               ))}
             </ul>
           )}
-          <Link to="/app/profile" className="mt-4 inline-flex text-sm font-semibold text-focus hover:underline">Manage in profile →</Link>
+          <Link to="/app/profile" className="mt-4 inline-flex text-sm font-semibold text-focus hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-focus rounded-sm">Manage in profile →</Link>
         </Card>
       </div>
     </>

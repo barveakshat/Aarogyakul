@@ -42,6 +42,12 @@ export async function deleteDocument(documentId: UUID) {
   await api.delete(`/api/documents/${documentId}`)
 }
 
+export async function retryDocument(documentId: UUID) {
+  if (demo.isDemoMode()) throw new Error('Retry is not available in demo mode')
+  const { data } = await api.post<DocumentUploadResponse>(`/api/documents/${documentId}/retry`)
+  return data
+}
+
 export async function listTimeline(memberId: UUID, page = 0, size = 20) {
   if (demo.isDemoMode()) return demo.demoListTimeline(memberId, page, size)
   const { data } = await api.get<PaginatedResponse<TimelineEventResponse>>(`/api/members/${memberId}/timeline`, {
