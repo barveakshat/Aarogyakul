@@ -32,7 +32,11 @@ public class Mapper {
     }
 
     private String resolvePhotoUrl(String key) {
-        if (key == null || key.isBlank()) return null;
+        return resolveUrl(key);
+    }
+
+    private String resolveUrl(String key) {
+        if (key == null || key.isBlank() || "pending".equals(key)) return null;
         return storage.presignedUrl(key, Duration.ofHours(1));
     }
 
@@ -49,7 +53,13 @@ public class Mapper {
     }
 
     public DocumentSummaryResponse documentSummary(MedicalDocument d) {
-        return new DocumentSummaryResponse(d.id, d.fileName, d.documentType, d.processingStatus, d.reportDate, d.uploadedAt);
+        return new DocumentSummaryResponse(d.id, d.fileName, d.documentType, d.processingStatus, d.reportDate, d.uploadedAt,
+                resolveUrl(d.fileUrl), resolveUrl(d.thumbnailUrl), d.fileSizeBytes);
+    }
+
+    public DocumentResponse documentResponse(MedicalDocument d, List<ParameterResponse> parameters, InsightResponse insight) {
+        return new DocumentResponse(d.id, d.fileName, d.documentType, d.processingStatus, d.reportDate, d.processingError,
+                parameters, insight, d.uploadedAt, resolveUrl(d.fileUrl), resolveUrl(d.thumbnailUrl), d.fileSizeBytes);
     }
 
     public InsightResponse insight(AiInsight insight) {

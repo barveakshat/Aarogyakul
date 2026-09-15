@@ -43,3 +43,23 @@ This document tracks the major technical, architectural, and product decisions m
 ## 8. Frontend Design System
 *   **Decision:** Semantic color reservation.
 *   **Rationale:** In a healthcare app, colors convey critical information. The Tailwind configuration strictly reserves `norm` (Green), `warn` (Amber), and `crit` (Red) exclusively for medical status indicators (e.g., in-range vs. out-of-range lab results). These colors are never used decoratively, reducing cognitive load and preventing user alarm. 
+
+## Frontend State & Real-Time Tracking: SSE Polling Bug
+
+When processing documents via the async AI pipeline, the frontend relied on Server-Sent Events (SSE) to display a multi-stage progress bar ("Reading PDF", "Extracting lab values", etc.). However, the UI consistently appeared "stuck" on Stage 1, despite backend logs confirming rapid advancement through the stages. Furthermore, when the pipeline ultimately failed (due to upstream LLM timeouts), the progress bar disappeared entirely, replaced by a generic failure card. This left the user completely blind to where the pipeline crashed.
+
+The root cause was a fragile React effect dependency in the parent `UploadPage.tsx`. The SSE connection was tied to the parent's state, and every 5-second background sync cycle caused React to tear down and recreate the `EventSource`, perpetually interrupting the stream and dropping events. To resolve this:
+1. **Component Isolation**: Extracted the SSE logic completely out of the parent page and moved it into an autonomous `DocumentDetail` component that strictly manages a single document's connection.
+2. **Transparent Failure State**: When the backend throws an exception, it now encodes the exact pipeline stage key into the database `processingError` string (e.g., `IDENTIFYING_PARAMETERS|Llama API call failed`). The frontend parses this encoded string to dynamically revive and render the multi-stage progress bar in the `FAILED` view. The completed stages are marked green, while the specific stage that crashed glows red. This elegantly provides full visibility into pipeline crashes without requiring any database migrations or schema bloat (following the "Simplest Solution" principle).
+
+## AI Pipeline JSON Truncation & Defensive Parsing
+
+During load testing with a comprehensive 3-page "Nutrition Test Report" PDF containing over 40 lab parameters, the AI pipeline consistently threw a `Could not parse extracted lab parameters` error at Stage 2.
+
+**Root Cause Analysis:** 
+By writing a test script to directly hit the Hugging Face Llama-3.1-8B-Instruct API with the exact prompt and PDF text, we discovered the LLM was successfully generating the extracted JSON array. However, the output was 1813 completion tokens. Our `LlamaClient` had a hardcoded `max_tokens: 2000` limit. In edge cases, or if the PDF contained slightly more data, the LLM hit the max token ceiling and abruptly truncated the JSON response mid-string (e.g. `{"name": "Free T4", "value":`). The `ParameterExtractionService`'s Jackson `ObjectMapper` predictably threw a `JsonProcessingException` when attempting to parse the broken JSON, crashing the entire pipeline. Additionally, if the LLM hallucinated a non-ISO date string for `reportDate`, `LocalDate.parse()` would throw a `DateTimeParseException`, also crashing the entire extraction.
+
+**Resolution:**
+1. **Token Limit Bump:** Increased `max_tokens` from `2000` to `4000` in the `LlamaClient.chat()` invocation within `ParameterExtractionService`. This gives the 8B model ample headroom to fully serialize large JSON arrays without artificial truncation.
+2. **Defensive Date Parsing:** Wrapped the `LocalDate.parse()` operation in a try-catch block. If the LLM generates an unparseable date string, we log a warning and safely default to `null` (falling back to `LocalDate.now()`), saving the remaining 40+ valid lab parameters from being discarded over a minor date parsing failure.
+3. **Diagnostic Logging:** Added the raw LLM string to the exception log (`log.error("... Raw response: {}", response, e)`) to ensure any future parsing crashes provide immediate visibility into the malformed JSON.

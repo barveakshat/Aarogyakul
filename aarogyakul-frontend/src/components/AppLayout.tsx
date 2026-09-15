@@ -1,9 +1,9 @@
-import { useState } from 'react'
-import { NavLink, Outlet, useNavigate, useLocation } from 'react-router'
+import { useState, useRef, useEffect } from 'react'
+import { NavLink, Outlet, useNavigate, useLocation, Link } from 'react-router'
 import { useAuth } from '../hooks/useAuth'
-
-import { House, FolderArchive, FileText, Activity, TrendingUp, Stethoscope, Settings, LogOut, Menu, X, Sparkles } from 'lucide-react'
-
+import { useProfile } from '../context/ProfileContext'
+import { House, FolderArchive, FileText, Activity, TrendingUp, Stethoscope, Settings, LogOut, Menu, X, Sparkles, Plus, ChevronDown, User } from 'lucide-react'
+import { Avatar } from './Avatar'
 
 const navItems = [
   { to: '/app', label: 'Home', icon: House, end: true },
@@ -14,7 +14,6 @@ const navItems = [
   { to: '/app/clinical', label: 'Clinical Notes', icon: Stethoscope },
 ]
 
-/** Bottom nav items — subset of navItems for mobile tab bar */
 const bottomNavItems = navItems.slice(0, 4)
 
 function usePageTitle() {
@@ -27,14 +26,34 @@ function usePageTitle() {
   return 'AarogyaKul'
 }
 
+function age(value: string) { 
+  const birth = new Date(`${value}T00:00:00`), now = new Date()
+  return now.getFullYear() - birth.getFullYear() - Number(now.getMonth() < birth.getMonth() || (now.getMonth() === birth.getMonth() && now.getDate() < birth.getDate())) 
+}
+
+function first(name: string) { return name.split(' ')[0] || name }
+
 export function AppLayout() {
   const { logout, isDemo } = useAuth()
-
+  const { activeProfile, family, setActiveProfile } = useProfile()
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const pageTitle = usePageTitle()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [profileDropdownOpen, setProfileDropdownOpen] = useState(false)
   const isDashboard = pathname === '/app'
+  
+  const dropdownRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setProfileDropdownOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   const handleLogout = () => {
     logout()
@@ -44,7 +63,7 @@ export function AppLayout() {
   return (
     <div className="h-screen w-full flex flex-col md:flex-row overflow-hidden bg-bg text-deep">
       {/* ─── DESKTOP SIDEBAR (hidden on mobile) ─── */}
-      <aside className="hidden md:flex w-[246px] flex-shrink-0 bg-sbBg flex-col">
+      <aside className="hidden md:flex w-[246px] flex-shrink-0 bg-sbBg flex-col z-20">
         <div className="px-6 pt-7 pb-6">
           <div className="flex items-center gap-3">
             <img src="/logo.svg" alt="AarogyaKul" className="h-12 w-12 shrink-0 object-contain" />
@@ -75,45 +94,85 @@ export function AppLayout() {
             ))}
           </div>
         </nav>
-
-        <div className="border-t border-white/10 px-4 py-4 space-y-1">
-          <NavLink
-            to="/app/settings"
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-150 ${
-                isActive ? 'text-white bg-sbHov' : 'text-sbTxt hover:text-white hover:bg-sbHov'
-              }`
-            }
-          >
-            <Settings className="w-[18px] h-[18px]" />
-            <span>Settings</span>
-          </NavLink>
-          <button 
-            onClick={handleLogout}
-            className="flex w-full items-center gap-3 px-3 py-2 rounded-md text-sm font-medium text-sbTxt hover:text-white hover:bg-sbHov transition-colors duration-150"
-          >
-            <LogOut className="w-[18px] h-[18px]" />
-            <span>Sign out</span>
-          </button>
-        </div>
       </aside>
 
       {/* ─── MAIN CONTENT AREA ─── */}
-      <main className="flex-1 flex flex-col min-w-0">
-        <header className={`h-12 md:h-14 px-4 md:px-8 flex items-center justify-between border-b border-line bg-surf shrink-0 ${isDashboard ? 'md:hidden' : ''}`}>
-          <div className="flex items-center gap-2.5 md:hidden">
-            <img src="/logo.svg" alt="AarogyaKul" className="h-6 w-6 rounded-md object-contain" />
-            <h2 className="text-sm font-semibold text-deep">{pageTitle}</h2>
+      <main className="flex-1 flex flex-col min-w-0 bg-bg">
+        {/* TOP BAR */}
+        <header className="h-16 px-4 md:px-8 flex items-center justify-between border-b border-line bg-surf shrink-0 z-10">
+          {/* Left: Mobile menu & Logo */}
+          <div className="flex items-center gap-2.5 md:w-[200px]">
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="md:hidden flex items-center justify-center h-8 w-8 rounded-md text-mid hover:bg-bg transition-colors"
+            >
+              {mobileMenuOpen ? <X size={18} /> : <Menu size={18} />}
+            </button>
+            <div className="flex items-center gap-2.5 md:hidden">
+              <img src="/logo.svg" alt="AarogyaKul" className="h-6 w-6 rounded-md object-contain" />
+              <h2 className="text-sm font-semibold text-deep">{pageTitle}</h2>
+            </div>
           </div>
-          <h2 className="text-sm font-semibold text-deep hidden md:block">{pageTitle}</h2>
 
-          {/* Mobile menu button */}
-          <button
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden flex items-center justify-center h-8 w-8 rounded-md text-mid hover:bg-bg transition-colors"
-          >
-            {mobileMenuOpen ? <X size={18} /> : <Menu size={18} />}
-          </button>
+          {/* Center: Family Members */}
+          <div className="hidden md:flex flex-1 justify-center items-center gap-2 overflow-x-auto px-4 no-scrollbar">
+            {activeProfile && family?.members.map(member => {
+              const isActive = member.memberId === activeProfile.memberId;
+              return (
+                <button 
+                  key={member.memberId} 
+                  onClick={() => setActiveProfile(member)} 
+                  className={`flex shrink-0 items-center gap-2 rounded-md px-2 py-1.5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-focus/50 ${isActive ? 'bg-focus/10 border border-focus/20' : 'hover:bg-bg'}`}
+                >
+                  <Avatar name={member.fullName} photoUrl={member.profilePhotoUrl} size="sm" />
+                  <div className="text-left leading-tight hidden xl:block pr-1">
+                    <span className="block text-sm font-semibold text-deep">{first(member.fullName)}</span>
+                    <span className="block text-[10px] text-mid">{member.dateOfBirth ? `${age(member.dateOfBirth)} yrs` : 'Member'}</span>
+                  </div>
+                  {isActive && <ChevronDown size={14} className="text-focus hidden xl:block" />}
+                </button>
+              )
+            })}
+            {activeProfile && (
+              <button 
+                onClick={() => navigate('/app/profiles')} 
+                className="flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium text-deep hover:bg-bg focus:outline-none focus-visible:ring-2 focus-visible:ring-focus/50 transition-colors"
+              >
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-focus/10 text-focus">
+                  <Plus size={16} strokeWidth={2.5} />
+                </div>
+                <span className="hidden xl:inline pr-2">Add Member</span>
+              </button>
+            )}
+          </div>
+
+          {/* Right: Profile Dropdown */}
+          <div className="flex items-center justify-end gap-3 md:w-[200px]" ref={dropdownRef}>
+            {activeProfile && (
+              <div className="relative flex items-center gap-3">
+                <button 
+                  onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
+                  className="flex items-center justify-center h-10 w-10 rounded-full hover:ring-2 hover:ring-focus/30 transition-shadow focus:outline-none bg-focus/10 text-focus"
+                >
+                  <Avatar name={activeProfile.fullName} photoUrl={activeProfile.profilePhotoUrl} size="md" className="cursor-pointer" />
+                </button>
+                {profileDropdownOpen && (
+                  <div className="absolute right-0 top-12 w-48 rounded-md border border-line bg-surf py-1 shadow-lg z-50">
+                    <Link to="/app/profile" onClick={() => setProfileDropdownOpen(false)} className="flex items-center gap-2 px-4 py-2 text-sm text-deep hover:bg-bg">
+                      <User size={16} /> Edit Profile
+                    </Link>
+                    <Link to="/app/settings" onClick={() => setProfileDropdownOpen(false)} className="flex items-center gap-2 px-4 py-2 text-sm text-deep hover:bg-bg">
+                      <Settings size={16} /> Settings
+                    </Link>
+                    <hr className="my-1 border-line" />
+                    <button onClick={handleLogout} className="flex w-full items-center gap-2 px-4 py-2 text-sm text-alert hover:bg-alert/5 text-left">
+                      <LogOut size={16} /> Sign out
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </header>
 
         {isDemo && (
@@ -158,7 +217,7 @@ export function AppLayout() {
         )}
 
         <div className={`flex-1 overflow-y-auto pb-20 md:pb-8 relative ${isDashboard ? '' : 'p-4 md:p-8'}`}>
-          <div className={`mx-auto w-full ${isDashboard ? '' : 'max-w-4xl'}`}>
+          <div className="w-full">
             <Outlet />
           </div>
         </div>

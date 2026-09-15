@@ -25,6 +25,8 @@ public class MedicalDocument {
     public String fileName;
     @Column(name = "file_url", nullable = false)
     public String fileUrl;
+    @Column(name = "thumbnail_url")
+    public String thumbnailUrl;
     @Column(name = "file_size_bytes", nullable = false)
     public long fileSizeBytes;
     @Column(name = "mime_type", nullable = false)

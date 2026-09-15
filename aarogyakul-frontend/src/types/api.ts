@@ -98,6 +98,9 @@ export interface DocumentUploadResponse {
 
 export interface DocumentSummaryResponse extends DocumentUploadResponse {
   reportDate?: string
+  fileUrl?: string
+  thumbnailUrl?: string
+  fileSizeBytes?: number
 }
 
 export interface ParameterResponse {

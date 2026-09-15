@@ -37,6 +37,12 @@ export async function getDocument(documentId: UUID) {
   return data
 }
 
+export async function getDocumentStatus(documentId: UUID) {
+  if (demo.isDemoMode()) return { stage: 'PENDING', message: 'Waiting...' }
+  const { data } = await api.get<{stage: string, message: string}>(`/api/documents/${documentId}/status`)
+  return data
+}
+
 export async function deleteDocument(documentId: UUID) {
   if (demo.isDemoMode()) return demo.demoDeleteDocument()
   await api.delete(`/api/documents/${documentId}`)

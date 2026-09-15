@@ -25,11 +25,13 @@ public class DocumentService {
     private final StorageService storage;
     private final DocumentProcessingService processingService;
     private final Mapper mapper;
+    private final PdfThumbnailGenerator thumbnailGenerator;
 
     public DocumentService(MemberService memberService, MedicalDocumentRepository documents,
                            MedicalParameterRepository parameters, AiInsightRepository insights,
                            TimelineEventRepository timelineEvents, StorageService storage,
-                           DocumentProcessingService processingService, Mapper mapper) {
+                           DocumentProcessingService processingService, Mapper mapper,
+                           PdfThumbnailGenerator thumbnailGenerator) {
         this.memberService = memberService;
         this.documents = documents;
         this.parameters = parameters;
@@ -38,6 +40,7 @@ public class DocumentService {
         this.storage = storage;
         this.processingService = processingService;
         this.mapper = mapper;
+        this.thumbnailGenerator = thumbnailGenerator;
     }
 
     @Transactional
@@ -58,6 +61,18 @@ public class DocumentService {
         Path temp = copyToTemp(file);
         String key = "documents/%s/%s.pdf".formatted(member.id, document.id);
         document.fileUrl = storage.put(key, temp, document.mimeType);
+
+        try {
+            Path thumbTemp = thumbnailGenerator.generateThumbnail(temp);
+            if (thumbTemp != null) {
+                String thumbKey = "documents/%s/%s-thumb.png".formatted(member.id, document.id);
+                document.thumbnailUrl = storage.put(thumbKey, thumbTemp, "image/png");
+                Files.deleteIfExists(thumbTemp);
+            }
+        } catch (Exception e) {
+            // Ignore thumbnail failure
+        }
+
         documents.save(document);
 
         if (requiresAiProcessing(document.documentType)) {
@@ -85,8 +100,7 @@ public class DocumentService {
         MedicalDocument document = requireOwnedDocument(documentId, userId);
         var params = parameters.findByDocumentIdOrderByParameterNameAsc(document.id).stream().map(mapper::parameter).toList();
         var insight = insights.findByDocumentId(document.id).map(mapper::insight).orElse(null);
-        return new DocumentResponse(document.id, document.fileName, document.documentType, document.processingStatus,
-                document.reportDate, document.processingError, params, insight, document.uploadedAt);
+        return mapper.documentResponse(document, params, insight);
     }
 
     @Transactional(readOnly = true)

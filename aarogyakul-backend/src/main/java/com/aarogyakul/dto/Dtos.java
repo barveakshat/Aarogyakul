@@ -70,11 +70,13 @@ public final class Dtos {
                                          ProcessingStatus processingStatus, OffsetDateTime uploadedAt) {}
     public record DocumentSummaryResponse(UUID documentId, String fileName, DocumentType documentType,
                                           ProcessingStatus processingStatus, LocalDate reportDate,
-                                          OffsetDateTime uploadedAt) {}
+                                          OffsetDateTime uploadedAt, String fileUrl, String thumbnailUrl,
+                                          Long fileSizeBytes) {}
     public record DocumentResponse(UUID documentId, String fileName, DocumentType documentType,
                                    ProcessingStatus processingStatus, LocalDate reportDate,
                                    String processingError, List<ParameterResponse> parameters,
-                                   InsightResponse insight, OffsetDateTime uploadedAt) {}
+                                   InsightResponse insight, OffsetDateTime uploadedAt,
+                                   String fileUrl, String thumbnailUrl, Long fileSizeBytes) {}
     public record ParameterResponse(String parameterName, BigDecimal value, String unit,
                                     BigDecimal referenceRangeLow, BigDecimal referenceRangeHigh,
                                     String confidence) {}

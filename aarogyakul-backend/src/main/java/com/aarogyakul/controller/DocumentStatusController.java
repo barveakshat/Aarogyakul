@@ -1,9 +1,11 @@
 package com.aarogyakul.controller;
 
+import com.aarogyakul.entity.MedicalDocument;
 import com.aarogyakul.exception.ApiException;
 import com.aarogyakul.repository.MedicalDocumentRepository;
 import com.aarogyakul.security.CurrentUser;
 import com.aarogyakul.service.ai.ProcessingStageEvent;
+import com.aarogyakul.util.Enums.ProcessingStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.event.EventListener;
@@ -36,10 +38,11 @@ public class DocumentStatusController {
     }
 
     @GetMapping(value = "/{documentId}/status-stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public SseEmitter statusStream(@PathVariable UUID documentId) {
+    public SseEmitter statusStream(@PathVariable UUID documentId, jakarta.servlet.http.HttpServletResponse response) {
+        response.setHeader("Cache-Control", "no-cache");
+        response.setHeader("X-Accel-Buffering", "no");
         // Verify the requesting user owns this document
-        documents.findById(documentId)
-                .filter(doc -> doc.familyMember.family.owner.id.equals(currentUser.id()))
+        documents.findByIdAndFamilyMemberFamilyOwnerId(documentId, currentUser.id())
                 .orElseThrow(() -> ApiException.notFound("Document not found"));
 
         SseEmitter emitter = new SseEmitter(SSE_TIMEOUT);
@@ -72,6 +75,34 @@ public class DocumentStatusController {
 
         log.debug("SSE client connected for document {}", documentId);
         return emitter;
+    }
+
+    @GetMapping(value = "/{documentId}/status", produces = MediaType.APPLICATION_JSON_VALUE)
+    public Map<String, String> getDocumentStage(@PathVariable UUID documentId) {
+        // Verify the requesting user owns this document
+        MedicalDocument doc = documents.findByIdAndFamilyMemberFamilyOwnerId(documentId, currentUser.id())
+                .orElseThrow(() -> ApiException.notFound("Document not found"));
+
+        // First check in-memory cache for active processing stages
+        ProcessingStageEvent lastStage = lastStages.get(documentId);
+        if (lastStage != null) {
+            return Map.of(
+                    "stage", lastStage.stage(),
+                    "message", lastStage.message()
+            );
+        }
+
+        // Fall back to the document's persisted status — handles the race condition
+        // where COMPLETED/FAILED events clear the cache before the frontend polls
+        if (doc.processingStatus == ProcessingStatus.COMPLETED) {
+            return Map.of("stage", "COMPLETED", "message", "Your results are ready!");
+        }
+        if (doc.processingStatus == ProcessingStatus.FAILED) {
+            return Map.of("stage", "FAILED", "message",
+                    doc.processingError != null ? doc.processingError : "Processing failed");
+        }
+
+        return Map.of("stage", "PENDING", "message", "Waiting to start...");
     }
 
     @EventListener
