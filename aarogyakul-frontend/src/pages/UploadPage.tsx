@@ -1,22 +1,22 @@
-import { FormEvent, useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useSearchParams } from 'react-router'
-import { getDocument, listDocuments, uploadDocument, retryDocument } from '../api/documents'
-import { Alert, Button, Card, EmptyState, LoadingState, PageHeader, SelectField, StatusBadge } from '../components/ui'
-import type { DocumentResponse, DocumentSummaryResponse, DocumentType, ParameterResponse } from '../types/api'
+import { getDocument, listDocuments, uploadDocument, retryDocument, getDocumentStatus } from '../api/documents'
+import { Alert, LoadingState, StatusBadge } from '../components/ui'
+import type { DocumentResponse, DocumentSummaryResponse, ParameterResponse } from '../types/api'
 import { documentTypeLabel, formatDate, formatDateTime } from '../utils/format'
-import { AlertCircle, Plus, RefreshCw, X } from 'lucide-react'
+import { AlertCircle, FileText, ArrowLeft, Download, ShieldCheck, ChevronRight, Calendar, Clock, Activity, UploadCloud, CheckCircle2, Sparkles } from 'lucide-react'
 import { useProfile } from '../context/ProfileContext'
 import { isDemoMode } from '../demo/demoApi'
 
+
 const maxPdfSize = 15 * 1024 * 1024
-const documentTypes: DocumentType[] = ['BLOOD_REPORT', 'LAB_REPORT', 'PRESCRIPTION', 'DISCHARGE_SUMMARY', 'BILL', 'INSURANCE_DOC', 'MEDICAL_ID', 'OTHER']
 
 const PIPELINE_STAGES = [
-  { key: 'EXTRACTING_TEXT', label: 'Reading PDF' },
-  { key: 'IDENTIFYING_PARAMETERS', label: 'Extracting lab values' },
-  { key: 'COMPARING_HISTORY', label: 'Comparing history' },
-  { key: 'GENERATING_SUMMARY', label: 'Generating summary' },
-  { key: 'COMPLETED', label: 'Complete' },
+  { key: 'EXTRACTING_TEXT', label: 'File uploaded', time: '2s' },
+  { key: 'IDENTIFYING_PARAMETERS', label: 'Reading document', time: '5s' },
+  { key: 'COMPARING_HISTORY', label: 'Extracting values', time: '8s' },
+  { key: 'GENERATING_SUMMARY', label: 'Analyzing with AI', time: 'Processing...' },
+  { key: 'COMPLETED', label: 'Generating summary', time: '' },
 ]
 
 export default function UploadPage() {
@@ -25,13 +25,10 @@ export default function UploadPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const [documents, setDocuments] = useState<DocumentSummaryResponse[]>([])
   const [selectedDocument, setSelectedDocument] = useState<DocumentResponse | null>(null)
-  const [retryingListId, setRetryingListId] = useState<string | null>(null)
-  const [documentType, setDocumentType] = useState<DocumentType>('BLOOD_REPORT')
-  const [file, setFile] = useState<File | null>(null)
   const [loading, setLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState('')
-  const [showUploadModal, setShowUploadModal] = useState(false)
+  const [isDragActive, setIsDragActive] = useState(false)
 
   const selectedDocumentId = searchParams.get('document')
 
@@ -41,7 +38,7 @@ export default function UploadPage() {
       const result = await listDocuments(memberId)
       setDocuments(result.data)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not load upload workspace')
+      setError(err instanceof Error ? err.message : 'Could not load documents')
     } finally {
       setLoading(false)
     }
@@ -59,31 +56,46 @@ export default function UploadPage() {
     void getDocument(selectedDocumentId).then(setSelectedDocument).catch((err) => setError(err instanceof Error ? err.message : 'Could not load document'))
   }, [selectedDocumentId])
 
-  // Poll list if there are pending/processing documents
   const hasProcessingDocs = documents.some((doc) => doc.processingStatus === 'PENDING' || doc.processingStatus === 'PROCESSING')
-
   useEffect(() => {
     if (!hasProcessingDocs) return
-
     const backgroundPoll = window.setInterval(() => {
       void load()
     }, 5000)
-
     return () => window.clearInterval(backgroundPoll)
   }, [hasProcessingDocs, load])
 
-  const handleUpload = async (event: FormEvent) => {
-    event.preventDefault()
+  const refreshSelectedDocument = useCallback(() => {
+    void load()
+    if (selectedDocumentId) {
+      void getDocument(selectedDocumentId).then(setSelectedDocument).catch(() => {})
+    }
+  }, [selectedDocumentId, load])
+
+  const onDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragActive(true)
+  }
+  const onDragLeave = () => setIsDragActive(false)
+
+  const onDrop = async (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragActive(false)
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      await handleFile(e.dataTransfer.files[0])
+    }
+  }
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      await handleFile(e.target.files[0])
+    }
+  }
+
+  const handleFile = async (file: File) => {
     setError('')
-    
-    // DEMO GUARD: Check if running in demo mode
     if (isDemoMode()) {
       setError('You are viewing a live demo. Uploads are disabled.')
-      return
-    }
-
-    if (!file) {
-      setError('Choose a PDF file before uploading.')
       return
     }
     if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
@@ -97,10 +109,9 @@ export default function UploadPage() {
 
     setUploading(true)
     try {
-      await uploadDocument(memberId, file, documentType)
-      setFile(null)
-      setSearchParams({})
+      const result = await uploadDocument(memberId, file, 'LAB_REPORT')
       await load()
+      setSearchParams({ document: result.documentId })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Upload failed')
     } finally {
@@ -108,477 +119,404 @@ export default function UploadPage() {
     }
   }
 
-  const handleRetryList = async (documentId: string, e: React.MouseEvent) => {
-    e.stopPropagation()
-    setRetryingListId(documentId)
+  const handleSampleReport = async () => {
     setError('')
+    if (isDemoMode()) {
+      setError('You are viewing a live demo. Uploads are disabled.')
+      return
+    }
+    setUploading(true)
     try {
-      await retryDocument(documentId)
+      const response = await fetch('/sample-report.pdf')
+      if (!response.ok) throw new Error('Sample report not found')
+      const blob = await response.blob()
+      const file = new File([blob], 'sample-report.pdf', { type: 'application/pdf' })
+      const result = await uploadDocument(memberId, file, 'LAB_REPORT')
       await load()
+      setSearchParams({ document: result.documentId })
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Retry failed')
+      setError(err instanceof Error ? err.message : 'Failed to load sample report')
     } finally {
-      setRetryingListId(null)
+      setUploading(false)
     }
   }
 
-  if (loading) return <LoadingState label="Loading documents" />
+  if (loading) return <LoadingState label="Loading AI Report Reader" />
+
+  const recentDocs = documents.slice(0, 3)
 
   return (
-    <>
-      <PageHeader
-        title={`AI Insights${activeProfile ? ` — ${activeProfile.fullName}` : ''}`}
-        description="Upload medical documents and view AI-powered analysis. Blood and lab reports are automatically processed."
-        action={
-          <button
-            onClick={() => setShowUploadModal(true)}
-            className="inline-flex items-center gap-2 rounded-md bg-focus px-5 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
-          >
-            <Plus size={16} /> Upload
-          </button>
-        }
-      />
+    <div className="pb-16 w-full">
+      <div className="mb-6 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-end">
+        <div>
+          <h1 className="text-2xl font-display font-semibold tracking-tight text-deep sm:text-3xl">AI Report Reader</h1>
+          <p className="mt-1 text-sm text-mid">Upload a medical report and get clear, structured insights with the power of AI.</p>
+        </div>
+      </div>
+
       {error ? <div className="mb-4"><Alert message={error} /></div> : null}
 
-      {/* Document list */}
-      {documents.length === 0 ? (
-        <EmptyState title="No documents yet" description="Click the + Upload button above to upload your first medical document." />
-      ) : (
-        <Card className="mb-6 overflow-hidden">
-          <div className="divide-y divide-line">
-            {documents.map((doc) => (
-              <button
-                key={doc.documentId}
-                onClick={() => setSearchParams({ document: doc.documentId })}
-                className={`block w-full text-left p-4 transition-colors hover:bg-slate-50 focus:outline-none focus:bg-slate-50 ${
-                  selectedDocumentId === doc.documentId ? 'border-l-[3px] border-focus bg-focus/[0.03]' : 'border-l-[3px] border-transparent'
-                }`}
-              >
-                <div className="flex items-start justify-between gap-2 mb-1.5">
-                  <h3 className="truncate text-sm font-semibold text-deep">{doc.fileName}</h3>
-                  <div className="flex items-center gap-2">
-                    <StatusBadge status={doc.processingStatus} />
-                    {doc.processingStatus === 'FAILED' && (
-                      <button
-                        onClick={(e) => handleRetryList(doc.documentId, e)}
-                        disabled={retryingListId === doc.documentId}
-                        className="rounded-full p-1 text-mid hover:bg-line/50 hover:text-focus transition-colors disabled:opacity-50"
-                        title="Retry processing"
-                      >
-                        <RefreshCw size={14} className={retryingListId === doc.documentId ? 'animate-spin text-focus' : ''} />
-                      </button>
-                    )}
+      <div className={`grid gap-6 ${selectedDocument ? 'lg:grid-cols-[1fr_300px]' : ''}`}>
+        {/* Left Column — upload area + document content */}
+        <div>
+          {/* Hero Upload & Recent */}
+          <div className="mb-8 grid gap-6 lg:grid-cols-[1fr_1fr]">
+            <div 
+              className={`flex flex-col items-start justify-center rounded-xl border-2 border-dashed bg-surf p-8 transition-colors ${
+                isDragActive ? 'border-focus bg-focus/5' : 'border-line hover:border-focus/50 hover:bg-slate-50'
+              }`}
+              onDragOver={onDragOver}
+              onDragLeave={onDragLeave}
+              onDrop={onDrop}
+            >
+              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-focus/10 text-focus">
+                <UploadCloud className="h-6 w-6" />
+              </div>
+              <p className="mb-1 text-base font-semibold text-deep">Drag and drop your report here</p>
+              <p className="mb-6 text-sm text-mid text-left">
+                or <label className="cursor-pointer font-medium text-focus hover:underline">click to browse<input type="file" className="hidden" accept="application/pdf,.pdf" onChange={handleFileSelect} disabled={uploading} /></label>
+              </p>
+              <p className="text-xs text-soft mb-8">Supports PDF, JPG, PNG (Max 15 MB)</p>
+              
+              <div className="flex w-full items-center justify-between rounded-lg border border-line bg-bg p-4">
+                <div>
+                  <p className="text-sm font-semibold text-deep">Try a sample report</p>
+                  <p className="text-xs text-mid">Explore with a sample report to see how it works.</p>
+                </div>
+                <button onClick={handleSampleReport} disabled={uploading} className="rounded-md border border-line bg-surf px-4 py-2 text-sm font-medium text-deep shadow-sm transition-colors hover:bg-slate-50 disabled:opacity-50">
+                  <FileText className="mr-2 inline h-4 w-4" /> Use Sample Report
+                </button>
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-line bg-surf p-6">
+              <div className="mb-4 flex items-center justify-between">
+                <h3 className="text-base font-semibold text-deep">Your Recent Reports</h3>
+                <button className="text-sm font-medium text-focus hover:underline">View all &rarr;</button>
+              </div>
+              <div className="space-y-3">
+                {recentDocs.length === 0 ? (
+                  <p className="text-sm text-mid">No reports uploaded yet.</p>
+                ) : (
+                  recentDocs.map(doc => (
+                    <button 
+                      key={doc.documentId}
+                      onClick={() => setSearchParams({ document: doc.documentId })}
+                      className={`flex w-full items-center justify-between rounded-lg border border-line p-3 transition-colors hover:bg-slate-50 ${selectedDocumentId === doc.documentId ? 'border-focus bg-focus/5' : ''}`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-line bg-bg text-mid">
+                          <FileText size={18} />
+                        </div>
+                        <div className="text-left">
+                          <p className="truncate text-sm font-semibold text-deep">{doc.fileName}</p>
+                          <p className="text-xs text-mid">{formatDate(doc.uploadedAt)}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <StatusBadge status={doc.processingStatus} />
+                        <ChevronRight className="h-4 w-4 text-soft" />
+                      </div>
+                    </button>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+
+          {selectedDocument && (
+            <DocumentDetailDashboard 
+              document={selectedDocument} 
+              onRefresh={refreshSelectedDocument} 
+              onClear={() => setSearchParams({})}
+            />
+          )}
+        </div>
+
+        {/* Right Column — document details sidebar (spans full height) */}
+        {selectedDocument && (
+          <div className="flex flex-col gap-6">
+            <div className="rounded-xl border border-line bg-surf p-5">
+              <h3 className="mb-4 text-base font-semibold text-deep">Original Document</h3>
+              <div className="mb-4 overflow-hidden rounded-lg border border-line bg-bg">
+                {selectedDocument.thumbnailUrl ? (
+                  <img src={selectedDocument.thumbnailUrl} alt="Document thumbnail" className="h-40 w-full object-cover object-top" />
+                ) : (
+                  <div className="flex h-32 w-full items-center justify-center text-soft">
+                    <FileText className="h-8 w-8" />
+                  </div>
+                )}
+              </div>
+              <p className="truncate text-sm font-semibold text-deep">{selectedDocument.fileName}</p>
+              <p className="mb-3 text-xs text-mid">
+                {selectedDocument.fileSizeBytes ? `${(selectedDocument.fileSizeBytes / 1024 / 1024).toFixed(1)} MB · ` : ''}{formatDate(selectedDocument.uploadedAt)}
+              </p>
+              <div className="flex gap-2">
+                <a href={selectedDocument.fileUrl} target="_blank" rel="noreferrer" className="flex flex-1 items-center justify-center rounded-md border border-line bg-surf px-3 py-1.5 text-xs font-medium text-deep shadow-sm hover:bg-slate-50">View</a>
+                <a href={selectedDocument.fileUrl} download className="flex flex-1 items-center justify-center gap-1 rounded-md border border-line bg-surf px-3 py-1.5 text-xs font-medium text-deep shadow-sm hover:bg-slate-50"><Download size={12} /> Download</a>
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-line bg-surf p-5">
+              <h3 className="mb-4 text-sm font-semibold text-deep">Report Details</h3>
+              <div className="space-y-4">
+                <div className="flex items-start gap-3">
+                  <Calendar className="mt-0.5 h-4 w-4 text-mid" />
+                  <div>
+                    <p className="text-xs text-mid">Report Date</p>
+                    <p className="text-sm font-medium text-deep">{formatDate(selectedDocument.reportDate)}</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2 text-xs text-mid">
-                  <span>{documentTypeLabel(doc.documentType)}</span>
-                  <span>&middot;</span>
-                  <span>{formatDateTime(doc.uploadedAt)}</span>
+                <div className="flex items-start gap-3">
+                  <Clock className="mt-0.5 h-4 w-4 text-mid" />
+                  <div>
+                    <p className="text-xs text-mid">Upload Date</p>
+                    <p className="text-sm font-medium text-deep">{formatDateTime(selectedDocument.uploadedAt)}</p>
+                  </div>
                 </div>
-              </button>
-            ))}
-          </div>
-        </Card>
-      )}
+                <div className="flex items-start gap-3">
+                  <FileText className="mt-0.5 h-4 w-4 text-mid" />
+                  <div>
+                    <p className="text-xs text-mid">Report Type</p>
+                    <p className="text-sm font-medium text-deep">{documentTypeLabel(selectedDocument.documentType)}</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <Activity className="mt-0.5 h-4 w-4 text-mid" />
+                  <div>
+                    <p className="text-xs text-mid">Status</p>
+                    <div className="mt-1">
+                      <StatusBadge status={selectedDocument.processingStatus} />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
 
-      {selectedDocument ? (
-        <DocumentDetail 
-          document={selectedDocument} 
-          onRefresh={() => {
-            void load()
-            void getDocument(selectedDocument.documentId).then(setSelectedDocument).catch(() => {})
-          }} 
-        />
-      ) : null}
-
-      {/* Upload Modal */}
-      {showUploadModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-deep/50 animate-enter backdrop-blur-sm" onClick={() => !uploading && setShowUploadModal(false)}>
-          <div className="relative mx-4 w-full max-w-md rounded-md border border-line bg-surf p-6 shadow-lg" onClick={(e) => e.stopPropagation()}>
-            <button
-              onClick={() => !uploading && setShowUploadModal(false)}
-              className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full text-mid transition-colors hover:bg-line/50 hover:text-deep"
-            >
-              <X size={18} />
-            </button>
-            <h3 className="text-lg font-semibold text-deep">Upload document</h3>
-            <p className="mt-1 text-sm text-mid">PDF only, max 15 MB. Blood & lab reports trigger AI analysis.</p>
-            <form className="mt-5 space-y-4" onSubmit={async (e) => { await handleUpload(e); if (!error) setShowUploadModal(false) }}>
-              <SelectField label="Document type" value={documentType} onChange={(event) => setDocumentType(event.target.value as DocumentType)}>
-                {documentTypes.map((type) => <option key={type} value={type}>{documentTypeLabel(type)}</option>)}
-              </SelectField>
-              <label className="block">
-                <span className="mb-1.5 block text-sm font-medium text-deep">PDF file</span>
-                <input
-                  className="block w-full rounded-md border border-line bg-surf px-3 py-2 text-sm text-deep file:mr-4 file:rounded-md file:border-0 file:bg-focus file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-white"
-                  type="file"
-                  accept="application/pdf,.pdf"
-                  onChange={(event) => setFile(event.target.files?.[0] || null)}
-                />
-              </label>
-              <Button className="w-full !bg-focus !text-white" type="submit" disabled={uploading}>{uploading ? 'Uploading...' : 'Upload and process'}</Button>
-            </form>
+            <div className="rounded-lg border border-[#1A7A4C]/20 bg-[#1A7A4C]/5 p-4 text-[#1A7A4C]">
+              <div className="flex items-start gap-2">
+                <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" />
+                <p className="text-xs font-medium leading-relaxed">AI-generated summary. Not a substitute for professional medical advice.</p>
+              </div>
+            </div>
           </div>
-        </div>
-      )}
-    </>
+        )}
+      </div>
+    </div>
   )
 }
 
-function DocumentDetail({ document, onRefresh }: { document: DocumentResponse; onRefresh: () => void }) {
-  const [retrying, setRetrying] = useState(false)
-  const [retryError, setRetryError] = useState('')
+function DocumentDetailDashboard({ document, onRefresh, onClear }: { document: DocumentResponse; onRefresh: () => void; onClear: () => void }) {
   const [processingStage, setProcessingStage] = useState<{ stage: string; message: string } | null>(null)
+  const [activeTab, setActiveTab] = useState('Summary')
+  const [retrying, setRetrying] = useState(false)
+  const [simulatedStageIndex, setSimulatedStageIndex] = useState(0)
+
+  const isProcessing = document.processingStatus === 'PENDING' || document.processingStatus === 'PROCESSING'
+  const isFailed = document.processingStatus === 'FAILED'
 
   useEffect(() => {
-    if (document.processingStatus !== 'PENDING' && document.processingStatus !== 'PROCESSING') {
-      return
-    }
-
-    const apiBase = import.meta.env.VITE_API_BASE_URL || ''
-    const sseUrl = `${apiBase}/api/documents/${document.documentId}/status-stream`
-    
-    let eventSource: EventSource | null = null
-
-    try {
-      eventSource = new EventSource(sseUrl, { withCredentials: true })
-
-      eventSource.addEventListener('stage', (event) => {
-        const data = JSON.parse(event.data)
-        setProcessingStage(data)
-        if (data.stage === 'COMPLETED' || data.stage === 'FAILED') {
-          onRefresh()
+    if (!isProcessing) return
+    const times = [3000, 6000, 5000, 6000, 10000]
+    let timeout: number
+    const advance = () => {
+      setSimulatedStageIndex(prev => {
+        if (prev < PIPELINE_STAGES.length - 1) {
+          timeout = window.setTimeout(advance, times[prev + 1])
+          return prev + 1
         }
+        return prev
       })
+    }
+    timeout = window.setTimeout(advance, times[0])
+    return () => window.clearTimeout(timeout)
+  }, [isProcessing])
 
-      eventSource.onerror = () => {
-        eventSource?.close()
-        eventSource = null
+  useEffect(() => {
+    if (document.processingStatus !== 'PENDING' && document.processingStatus !== 'PROCESSING') return
+
+    const pollStatus = async () => {
+      try {
+        const data = await getDocumentStatus(document.documentId)
+        setProcessingStage(data)
+        if (data.stage === 'COMPLETED' || data.stage === 'FAILED') onRefresh()
+      } catch (err) {
+        console.warn('Failed to fetch status', err)
       }
-    } catch {
-      // ignore
     }
 
-    // Fallback polling for this specific document
-    const poll = window.setInterval(() => {
-      onRefresh()
-    }, 5000)
+    const stageInterval = window.setInterval(pollStatus, 2000)
+    const refreshInterval = window.setInterval(onRefresh, 5000)
+    
+    // Initial fetch
+    void pollStatus()
 
     return () => {
-      eventSource?.close()
-      window.clearInterval(poll)
+      window.clearInterval(stageInterval)
+      window.clearInterval(refreshInterval)
     }
   }, [document.documentId, document.processingStatus, onRefresh])
 
   const handleRetry = async () => {
     setRetrying(true)
-    setRetryError('')
     try {
       await retryDocument(document.documentId)
       onRefresh()
-    } catch (err) {
-      setRetryError(err instanceof Error ? err.message : 'Retry failed')
     } finally {
       setRetrying(false)
     }
   }
+  
+  const parameterWithStatus = useCallback((p: ParameterResponse) => {
+    if (p.referenceRangeLow == null || p.referenceRangeHigh == null) return { ...p, status: 'unknown' }
+    if (p.value < p.referenceRangeLow) return { ...p, status: 'low' }
+    if (p.value > p.referenceRangeHigh) return { ...p, status: 'high' }
+    return { ...p, status: 'normal' }
+  }, [])
 
-  const summaryText = document.insight?.summaryText || ''
-  const categorized = document.parameters.map(parameterWithStatus)
-
+  const categorized = useMemo(() => document.parameters ? document.parameters.map(parameterWithStatus) : [], [document.parameters, parameterWithStatus])
   const anomalies = categorized.filter((p) => p.status === 'low' || p.status === 'high')
-  const routineParameters = categorized.filter((p) => p.status === 'normal' || p.status === 'unknown')
   const normalCount = categorized.filter((p) => p.status === 'normal').length
-  const totalWithRange = categorized.filter((p) => p.status !== 'unknown').length
+  const totalCount = document.parameters?.length || 0
 
-  if (document.processingStatus === 'PENDING' || document.processingStatus === 'PROCESSING') {
+
+
+  if (isProcessing) {
+    const currentIndex = processingStage ? PIPELINE_STAGES.findIndex(s => s.key === processingStage.stage) : 0
+    const activeIndex = Math.max(currentIndex, simulatedStageIndex)
+    const currentLabel = PIPELINE_STAGES[Math.min(activeIndex, PIPELINE_STAGES.length - 1)].label
+
     return (
-      <Card className="overflow-hidden">
-        <div className="flex flex-col gap-3 border-b border-line px-5 py-4 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <h2 className="text-base font-semibold text-deep">{document.fileName}</h2>
-            <p className="mt-1 text-sm text-mid">{documentTypeLabel(document.documentType)} · Report date {formatDate(document.reportDate)}</p>
+      <div className="mb-8 rounded-xl border border-line bg-surf p-10 text-center">
+        <div className="flex flex-col items-center justify-center">
+          <div className="relative mb-6 flex h-24 w-24 items-center justify-center">
+            <div className="absolute inset-0 animate-[spin_3s_linear_infinite] rounded-full border-2 border-dashed border-focus/40"></div>
+            <div className="absolute h-16 w-16 animate-pulse rounded-full bg-focus/20 blur-xl"></div>
+            <Sparkles className="relative z-10 h-8 w-8 text-focus" />
           </div>
-          <StatusBadge status={document.processingStatus} />
+          <h3 className="mb-3 font-serif text-xl font-bold text-deep">Analyzing your report</h3>
+          <p className="min-h-6 text-sm font-medium text-focus transition-all duration-300">{currentLabel}...</p>
+          <p className="mt-2 text-xs text-mid">This usually takes about 15-20 seconds.</p>
         </div>
-        <div className="p-5 sm:p-6">
-          <div className="mb-6 rounded-md border border-focus/20 bg-focus/5 p-6 shadow-sm">
-            <div className="flex items-center gap-3 mb-5">
-              <RefreshCw className="h-5 w-5 animate-spin text-focus" />
-              <h3 className="text-sm font-semibold text-deep">
-                AI is analyzing your report...
-              </h3>
-            </div>
-            
-            <div className="flex items-center gap-1 mb-4">
-              {PIPELINE_STAGES.map((stage, i) => {
-                const currentIndex = processingStage ? PIPELINE_STAGES.findIndex(s => s.key === processingStage.stage) : 0
-                const isDone = i < currentIndex
-                const isCurrent = i === currentIndex
-                return (
-                  <div key={stage.key} className="flex-1 flex flex-col items-center gap-1.5">
-                    <div className={`h-1.5 w-full rounded-full transition-all duration-500 ${
-                      isDone ? 'bg-ok' : isCurrent ? 'bg-focus' : 'bg-line'
-                    }`} />
-                    <span className={`text-[10px] font-medium text-center leading-tight ${
-                      isCurrent ? 'text-focus font-semibold' : isDone ? 'text-ok' : 'text-mid'
-                    }`}>{stage.label}</span>
-                  </div>
-                )
-              })}
-            </div>
-            
-            <p className="text-sm font-medium text-deep">
-              {processingStage ? processingStage.message : 'Warming up AI engine...'}
-            </p>
-            <p className="mt-4 text-xs text-mid">
-              This process typically takes 1 to 3 minutes depending on the report length. 
-              <strong> You can safely leave this page or close the tab</strong>; your results will be waiting for you when you return.
-            </p>
-          </div>
-        </div>
-      </Card>
+      </div>
     )
   }
 
-  if (document.processingStatus === 'FAILED') {
-    const errorParts = (document.processingError || '').split('|')
-    const failedStageKey = errorParts.length > 1 ? errorParts[0] : null
-    const errorMessage = errorParts.length > 1 ? errorParts.slice(1).join('|') : document.processingError
-
+  if (isFailed) {
     return (
-      <Card className="overflow-hidden">
-        <div className="flex flex-col gap-3 border-b border-line px-5 py-4 sm:flex-row sm:items-start sm:justify-between">
+      <div className="rounded-xl border border-alert/20 bg-alert/5 p-6 mb-8 text-center">
+        <AlertCircle className="mx-auto mb-3 h-8 w-8 text-alert" />
+        <h3 className="text-base font-semibold text-alert">AI Processing Failed</h3>
+        <p className="mx-auto mt-2 max-w-sm text-sm text-deep font-medium">We couldn't fully process this document. You can try uploading a clearer scan, or try again.</p>
+        {document.processingError && <p className="mt-2 text-xs text-alert">{document.processingError}</p>}
+        <button onClick={handleRetry} disabled={retrying} className="mt-4 rounded-md bg-surf border border-line px-4 py-2 text-sm font-semibold text-focus shadow-sm hover:bg-bg disabled:opacity-50">
+          {retrying ? 'Retrying...' : 'Retry Processing'}
+        </button>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex flex-col gap-6">
+      <div>
+        <button onClick={onClear} className="mb-4 flex items-center gap-1.5 text-sm font-medium text-mid hover:text-deep transition-colors">
+          <ArrowLeft size={16} /> Back to uploads
+        </button>
+        <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-base font-semibold text-deep">{document.fileName}</h2>
-            <p className="mt-1 text-sm text-mid">{documentTypeLabel(document.documentType)} · Report date {formatDate(document.reportDate)}</p>
+            <h2 className="text-xl font-display font-semibold text-deep">{document.fileName}</h2>
+            <p className="mt-1 text-sm text-mid">Processed on {formatDateTime(document.uploadedAt)}</p>
           </div>
-          <StatusBadge status={document.processingStatus} />
         </div>
-        <div className="p-5 sm:p-6">
-          <div className="rounded-md border border-alert/20 bg-alert/5 p-6 shadow-sm text-center">
-            <div className="flex items-center justify-center gap-3 mb-5">
-              <AlertCircle className="h-5 w-5 text-alert" />
-              <h3 className="text-sm font-semibold text-alert">
-                AI processing failed
-              </h3>
-            </div>
+      </div>
+
+      <div className="flex items-center gap-1 overflow-x-auto rounded-lg bg-bg p-1">
+        {['Summary', 'All Parameters'].map(tab => (
+          <button 
+            key={tab} 
+            onClick={() => setActiveTab(tab)}
+            className={`flex-1 whitespace-nowrap rounded-md px-4 py-2 text-sm font-medium transition-all ${activeTab === tab ? 'bg-surf text-deep shadow-sm' : 'text-mid hover:text-deep'}`}
+          >
+            {tab}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === 'Summary' && (
+        <div className="flex flex-col gap-6">
+          <div className="rounded-xl border border-line bg-surf p-5">
+            <h3 className="mb-4 text-base font-semibold text-deep">Overall Summary</h3>
             
-            {failedStageKey && (
-              <div className="flex items-center gap-1 mb-6">
-                {PIPELINE_STAGES.map((stage, i) => {
-                  const currentIndex = PIPELINE_STAGES.findIndex(s => s.key === failedStageKey)
-                  const isDone = i < currentIndex
-                  const isCurrent = i === currentIndex
-                  return (
-                    <div key={stage.key} className="flex-1 flex flex-col items-center gap-1.5">
-                      <div className={`h-1.5 w-full rounded-full transition-all duration-500 ${
-                        isDone ? 'bg-ok' : isCurrent ? 'bg-alert shadow-[0_0_8px_rgba(239,68,68,0.4)]' : 'bg-line/50'
-                      }`} />
-                      <span className={`text-[10px] font-medium text-center leading-tight ${
-                        isCurrent ? 'text-alert font-bold' : isDone ? 'text-ok' : 'text-mid'
-                      }`}>{stage.label}</span>
+            {anomalies.length > 0 ? (
+              <div className="mb-5 flex items-start gap-3 rounded-md bg-attn/10 p-4 text-attn">
+                <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
+                <div>
+                  <p className="text-sm font-bold">{anomalies.length} value{anomalies.length > 1 ? 's are' : ' is'} outside the normal range</p>
+                  <p className="mt-1 text-xs">Most values are within normal range. Please review the flagged parameters and consider consulting a healthcare professional.</p>
+                </div>
+              </div>
+            ) : (
+              <div className="mb-5 flex items-start gap-3 rounded-md bg-ok/10 p-4 text-ok">
+                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0" />
+                <div>
+                  <p className="text-sm font-bold">All values are within normal range</p>
+                  <p className="mt-1 text-xs">No flagged parameters found in this report.</p>
+                </div>
+              </div>
+            )}
+
+            <div className="grid grid-cols-3 gap-2">
+              <div className="rounded-md bg-bg p-3">
+                <p className="text-xs text-mid mb-1">Total</p>
+                <p className="text-lg font-semibold text-deep">{totalCount}</p>
+              </div>
+              <div className="rounded-md bg-bg p-3">
+                <p className="text-xs text-mid mb-1">Normal</p>
+                <p className="text-lg font-semibold text-ok">{normalCount}</p>
+              </div>
+              <div className="rounded-md bg-bg p-3">
+                <p className="text-xs text-mid mb-1">Abnormal</p>
+                <p className="text-lg font-semibold text-alert">{anomalies.length}</p>
+              </div>
+            </div>
+          </div>
+
+          {anomalies.length > 0 && (
+            <div className="rounded-xl border border-line bg-surf p-5">
+              <h3 className="mb-4 text-base font-semibold text-deep">Key Findings</h3>
+              <div className="space-y-4">
+                {anomalies.map((p, i) => (
+                  <div key={i} className="flex items-start gap-3 border-l-2 border-alert pl-3">
+                    <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-alert" />
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-semibold text-deep">{p.parameterName}</span>
+                        <span className="rounded bg-alert/10 px-1.5 py-0.5 text-[10px] font-bold text-alert uppercase">{p.status}</span>
+                      </div>
+                      <p className="mt-1 text-sm font-bold text-deep">{p.value} <span className="text-xs font-normal text-mid">{p.unit}</span></p>
+                      <p className="mt-1 text-xs text-mid">Normal: {p.referenceRangeLow} - {p.referenceRangeHigh}</p>
                     </div>
-                  )
-                })}
+                  </div>
+                ))}
               </div>
-            )}
+            </div>
+          )}
+        </div>
+      )}
 
-            <p className="mx-auto mb-4 max-w-sm text-sm text-deep font-medium">
-              We couldn't fully process this document. You can try uploading a clearer scan, or try again.
-            </p>
-            {errorMessage && (
-              <div className="mx-auto mb-5 max-w-md rounded-md bg-surf px-4 py-3 text-left text-xs font-medium text-mid border border-alert/20 shadow-sm">
-                <strong className="text-alert block mb-1">Backend Error Details</strong>
-                {errorMessage}
+      {activeTab === 'All Parameters' && (
+        <div className="rounded-xl border border-line bg-surf p-5">
+          <h3 className="mb-4 text-base font-semibold text-deep">All Parameters</h3>
+          <div className="divide-y divide-line border-t border-line">
+            {document.parameters.map((p, i) => (
+              <div key={i} className="flex justify-between py-3">
+                <span className="text-sm font-medium text-deep">{p.parameterName}</span>
+                <span className="text-sm text-mid">{p.value} {p.unit}</span>
               </div>
-            )}
-            {retryError ? <div className="mb-4 text-left"><Alert message={retryError} /></div> : null}
-            <div className="flex justify-center mt-2">
-              <button
-                onClick={handleRetry}
-                disabled={retrying}
-                className="inline-flex items-center justify-center gap-2 rounded-md border border-line bg-surf px-4 py-2 text-sm font-semibold text-focus shadow-sm transition-colors hover:bg-bg disabled:opacity-50"
-              >
-                {retrying ? <RefreshCw className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-                {retrying ? 'Restarting...' : 'Retry Processing'}
-              </button>
-            </div>
+            ))}
           </div>
         </div>
-      </Card>
-    )
-  }
-
-  return (
-    <Card className="overflow-hidden">
-      <div className="flex flex-col gap-3 border-b border-line px-5 py-4 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h2 className="text-base font-semibold text-deep">{document.fileName}</h2>
-          <p className="mt-1 text-sm text-mid">{documentTypeLabel(document.documentType)} · Report date {formatDate(document.reportDate)}</p>
-        </div>
-        <StatusBadge status={document.processingStatus} />
-      </div>
-
-
-
-      <div className="space-y-8 p-5 sm:p-6">
-        {totalWithRange > 0 && (
-          <div className="flex flex-col gap-2 border-b border-line pb-5 sm:flex-row sm:items-baseline sm:justify-between">
-            <div>
-              <h3 className="text-sm font-semibold text-deep">
-                {anomalies.length === 0 ? 'All measured values are within range' : `${anomalies.length} value${anomalies.length === 1 ? '' : 's'} flagged for review`}
-              </h3>
-              <p className="mt-1 text-sm text-mid">
-                {anomalies.length === 0 ? 'No extracted values fall outside their reported reference range.' : 'Reference ranges are provided by the report and are not a diagnosis.'}
-              </p>
-            </div>
-            <span className="tabular-nums text-xs font-medium text-mid">{normalCount} of {totalWithRange} in range</span>
-          </div>
-        )}
-
-        {anomalies.length > 0 && (
-          <section aria-labelledby="flagged-values-heading">
-            <div className="mb-3 flex items-baseline justify-between gap-3">
-              <h3 id="flagged-values-heading" className="text-base font-semibold text-deep">Flagged values</h3>
-              <span className="text-xs text-mid">Outside the report reference range</span>
-            </div>
-            <div className="space-y-3">
-              {anomalies.map((parameter) => <FlaggedParameter key={`${parameter.parameterName}-${parameter.unit}`} parameter={parameter} />)}
-            </div>
-          </section>
-        )}
-
-        {summaryText && (
-          <section className="border-l-[3px] border-focus/30 py-1 pl-4" aria-labelledby="ai-summary-heading">
-            <div className="mb-3 flex items-baseline justify-between gap-3 border-b border-line pb-2">
-              <h3 id="ai-summary-heading" className="text-xs font-medium text-deep">AI-generated summary</h3>
-              <span className="text-[11px] text-soft">Based on this report</span>
-            </div>
-            <p className="max-w-[72ch] whitespace-pre-line text-sm leading-6 text-deep">{summaryText}</p>
-          </section>
-        )}
-
-        <section aria-labelledby="extracted-parameters-heading">
-          <div className="mb-3 flex items-baseline justify-between gap-3">
-            <h3 id="extracted-parameters-heading" className="text-base font-semibold text-deep">Extracted parameters</h3>
-            {anomalies.length > 0 ? <span className="text-xs text-mid">Flagged values are shown above</span> : null}
-          </div>
-          <div className="overflow-x-auto rounded-md border border-line">
-            <table className="min-w-[620px] w-full text-left text-sm">
-              <thead>
-                <tr className="border-b border-line bg-bg">
-                  <th className="px-4 py-2.5 text-xs font-medium text-mid">Parameter</th>
-                  <th className="px-4 py-2.5 text-xs font-medium text-mid">Value</th>
-                  <th className="px-4 py-2.5 text-xs font-medium text-mid">Reference range</th>
-                  <th className="px-4 py-2.5 text-xs font-medium text-mid">Status</th>
-                  <th className="px-4 py-2.5 text-xs font-medium text-mid">Confidence</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-line/60">
-                {routineParameters.length === 0 && anomalies.length === 0 ? (
-                  <tr><td className="px-4 py-4 text-mid" colSpan={5}>No extracted parameters available yet.</td></tr>
-                ) : routineParameters.length === 0 ? (
-                  <tr><td className="px-4 py-4 text-mid" colSpan={5}>All extracted values are flagged above for review.</td></tr>
-                ) : (
-                  routineParameters.map((p) => (
-                    <tr key={`${p.parameterName}-${p.unit}`}>
-                      <td className="px-4 py-2.5 font-medium text-deep">{p.parameterName}</td>
-                      <td className="px-4 py-2.5 font-semibold tabular-nums text-deep">
-                        {p.value} <span className="text-xs font-normal text-mid">{p.unit}</span>
-                      </td>
-                      <td className="px-4 py-2.5 text-mid tabular-nums">
-                        {p.referenceRangeLow ?? '–'} – {p.referenceRangeHigh ?? '–'}
-                      </td>
-                      <td className="px-4 py-2.5">
-                        {p.status === 'normal' && <span className="inline-flex items-center gap-1 text-xs font-medium text-ok">✓ Normal</span>}
-                        {p.status === 'unknown' && <span className="text-xs font-medium text-mid">No range reported</span>}
-                      </td>
-                      <td className="px-4 py-2.5"><Confidence confidence={p.confidence} /></td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </section>
-      </div>
-    </Card>
+      )}
+    </div>
   )
-}
-
-type ParameterStatus = 'high' | 'low' | 'normal' | 'unknown'
-type CategorizedParameter = ParameterResponse & { status: ParameterStatus }
-
-function parameterWithStatus(parameter: ParameterResponse): CategorizedParameter {
-  if (parameter.referenceRangeLow == null || parameter.referenceRangeHigh == null) return { ...parameter, status: 'unknown' }
-  if (parameter.value < parameter.referenceRangeLow) return { ...parameter, status: 'low' }
-  if (parameter.value > parameter.referenceRangeHigh) return { ...parameter, status: 'high' }
-  return { ...parameter, status: 'normal' }
-}
-
-function FlaggedParameter({ parameter }: { parameter: CategorizedParameter }) {
-  const isHigh = parameter.status === 'high'
-  const tone = isHigh
-    ? { accent: 'border-alert', background: 'bg-alert/[0.04]', text: 'text-alert', label: '↑ High' }
-    : { accent: 'border-attn', background: 'bg-attn/[0.04]', text: 'text-attn', label: '↓ Low' }
-  const range = rangeDisplay(parameter)
-
-  return (
-    <article className={`border-l-[3px] ${tone.accent} ${tone.background} px-4 py-4 sm:px-5`}>
-      <div className="grid gap-4 sm:grid-cols-[1fr_auto] sm:items-start">
-        <div>
-          <p className={`text-xs font-semibold ${tone.text}`}>{tone.label}</p>
-          <h4 className="mt-1 text-base font-semibold text-deep">{parameter.parameterName}</h4>
-          <div className="mt-3 flex items-baseline gap-2">
-            <span className={`tabular-nums text-2xl font-semibold leading-none ${tone.text}`}>{parameter.value}</span>
-            <span className="text-sm text-mid">{parameter.unit}</span>
-          </div>
-        </div>
-        <div className="text-left sm:text-right">
-          <p className="text-xs text-mid">Reference range</p>
-          <p className="mt-1 tabular-nums text-sm font-medium text-deep">{parameter.referenceRangeLow} – {parameter.referenceRangeHigh} {parameter.unit}</p>
-          <div className="mt-3 sm:justify-end"><Confidence confidence={parameter.confidence} /></div>
-        </div>
-      </div>
-      <div className="mt-5">
-        <div className="relative h-2 bg-line/70" aria-label={`Value ${parameter.value}; reported reference range ${parameter.referenceRangeLow} to ${parameter.referenceRangeHigh}`}>
-          <span className="absolute inset-y-0 bg-ok/15" style={{ left: `${range.referenceStart}%`, width: `${range.referenceWidth}%` }} />
-          <span className={`absolute top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-surf ${isHigh ? 'bg-alert' : 'bg-attn'}`} style={{ left: `${range.valuePosition}%` }} />
-        </div>
-        <div className="mt-2 flex justify-between tabular-nums text-[11px] text-mid">
-          <span>{range.minimum}</span>
-          <span>Ref. {parameter.referenceRangeLow} – {parameter.referenceRangeHigh}</span>
-          <span>{range.maximum}</span>
-        </div>
-      </div>
-    </article>
-  )
-}
-
-function Confidence({ confidence }: { confidence?: string }) {
-  if (!confidence) return <span className="text-[11px] text-mid">Confidence unavailable</span>
-  const color = confidence === 'HIGH' ? 'bg-ok' : confidence === 'MEDIUM' ? 'bg-attn' : 'bg-alert'
-  return (
-    <span className="inline-flex items-center gap-1.5" title={`AI extraction confidence: ${confidence}. HIGH = very reliable, MEDIUM = review recommended, LOW = manual verification needed.`}>
-      <span className={`h-2 w-2 rounded-full ${color}`} />
-      <span className="text-[11px] font-semibold text-mid">{confidence} confidence</span>
-    </span>
-  )
-}
-
-function rangeDisplay(parameter: CategorizedParameter) {
-  const low = parameter.referenceRangeLow!
-  const high = parameter.referenceRangeHigh!
-  const spread = high - low || 1
-  const minimum = Math.min(low - spread * 0.2, parameter.value - spread * 0.1)
-  const maximum = Math.max(high + spread * 0.2, parameter.value + spread * 0.1)
-  const fullSpread = maximum - minimum
-  return {
-    minimum: Number(minimum.toFixed(1)),
-    maximum: Number(maximum.toFixed(1)),
-    referenceStart: ((low - minimum) / fullSpread) * 100,
-    referenceWidth: (spread / fullSpread) * 100,
-    valuePosition: ((parameter.value - minimum) / fullSpread) * 100,
-  }
 }
