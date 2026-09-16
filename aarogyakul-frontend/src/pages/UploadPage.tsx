@@ -1,8 +1,8 @@
 import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useSearchParams } from 'react-router'
 import { getDocument, listDocuments, uploadDocument, retryDocument, getDocumentStatus } from '../api/documents'
-import { Alert, LoadingState, StatusBadge } from '../components/ui'
-import type { DocumentResponse, DocumentSummaryResponse, ParameterResponse } from '../types/api'
+import { Alert, LoadingState, StatusBadge, SelectField } from '../components/ui'
+import type { DocumentType, DocumentResponse, DocumentSummaryResponse, ParameterResponse } from '../types/api'
 import { documentTypeLabel, formatDate, formatDateTime } from '../utils/format'
 import { AlertCircle, FileText, ArrowLeft, Download, ShieldCheck, ChevronRight, Calendar, Clock, Activity, UploadCloud, CheckCircle2, Sparkles } from 'lucide-react'
 import { useProfile } from '../context/ProfileContext'
@@ -19,6 +19,25 @@ const PIPELINE_STAGES = [
   { key: 'COMPLETED', label: 'Generating summary', time: '' },
 ]
 
+function FormattedText({ text }: { text: string }) {
+  if (!text) return null
+  return (
+    <>
+      {text.split('\n').map((line, i, arr) => (
+        <span key={i}>
+          {line.split(/(\*\*.*?\*\*)/g).map((part, j) => {
+            if (part.startsWith('**') && part.endsWith('**')) {
+              return <strong key={j} className="font-semibold text-deep">{part.slice(2, -2)}</strong>
+            }
+            return <span key={j}>{part}</span>
+          })}
+          {i < arr.length - 1 && <br />}
+        </span>
+      ))}
+    </>
+  )
+}
+
 export default function UploadPage() {
   const { activeProfile } = useProfile()
   const memberId = activeProfile?.memberId || ''
@@ -29,6 +48,7 @@ export default function UploadPage() {
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState('')
   const [isDragActive, setIsDragActive] = useState(false)
+  const [selectedDocumentType, setSelectedDocumentType] = useState<DocumentType>('LAB_REPORT')
 
   const selectedDocumentId = searchParams.get('document')
 
@@ -109,7 +129,7 @@ export default function UploadPage() {
 
     setUploading(true)
     try {
-      const result = await uploadDocument(memberId, file, 'LAB_REPORT')
+      const result = await uploadDocument(memberId, file, selectedDocumentType)
       await load()
       setSearchParams({ document: result.documentId })
     } catch (err) {
@@ -176,6 +196,22 @@ export default function UploadPage() {
               <p className="mb-6 text-sm text-mid text-left">
                 or <label className="cursor-pointer font-medium text-focus hover:underline">click to browse<input type="file" className="hidden" accept="application/pdf,.pdf" onChange={handleFileSelect} disabled={uploading} /></label>
               </p>
+              
+              <div className="mb-8 w-full max-w-sm">
+                <SelectField 
+                  label="Document Type" 
+                  value={selectedDocumentType} 
+                  onChange={(e) => setSelectedDocumentType(e.target.value as DocumentType)}
+                  disabled={uploading}
+                >
+                  <option value="LAB_REPORT">Lab Report</option>
+                  <option value="PRESCRIPTION">Prescription</option>
+                  <option value="VACCINATION">Vaccination</option>
+                  <option value="BILL">Medical Bill</option>
+                  <option value="OTHER">Other / Generic</option>
+                </SelectField>
+              </div>
+
               <p className="text-xs text-soft mb-8">Supports PDF, JPG, PNG (Max 15 MB)</p>
               
               <div className="flex w-full items-center justify-between rounded-lg border border-line bg-bg p-4">
@@ -378,6 +414,19 @@ function DocumentDetailDashboard({ document, onRefresh, onClear }: { document: D
   const anomalies = categorized.filter((p) => p.status === 'low' || p.status === 'high')
   const normalCount = categorized.filter((p) => p.status === 'normal').length
   const totalCount = document.parameters?.length || 0
+  
+  const hasLabData = document.parameters && document.parameters.length > 0;
+  const hasPrescriptionData = document.prescriptions && document.prescriptions.length > 0;
+  const hasVaccinationData = document.vaccinations && document.vaccinations.length > 0;
+  const hasBillData = document.medicalBills && document.medicalBills.length > 0;
+  const hasMetadata = document.extractedMetadata && Object.keys(document.extractedMetadata).length > 0;
+  
+  const tabs = ['Summary']
+  if (hasLabData) tabs.push('All Parameters')
+  if (hasPrescriptionData) tabs.push('Prescription Details')
+  if (hasVaccinationData) tabs.push('Vaccinations')
+  if (hasBillData) tabs.push('Bill Details')
+  if (hasMetadata && !hasLabData && !hasPrescriptionData && !hasVaccinationData && !hasBillData) tabs.push('Metadata')
 
 
 
@@ -431,7 +480,7 @@ function DocumentDetailDashboard({ document, onRefresh, onClear }: { document: D
       </div>
 
       <div className="flex items-center gap-1 overflow-x-auto rounded-lg bg-bg p-1">
-        {['Summary', 'All Parameters'].map(tab => (
+        {tabs.map(tab => (
           <button 
             key={tab} 
             onClick={() => setActiveTab(tab)}
@@ -447,51 +496,61 @@ function DocumentDetailDashboard({ document, onRefresh, onClear }: { document: D
           <div className="rounded-xl border border-line bg-surf p-5">
             <h3 className="mb-4 text-base font-semibold text-deep">Overall Summary</h3>
             
-            {anomalies.length > 0 ? (
-              <div className="mb-5 flex items-start gap-3 rounded-md bg-attn/10 p-4 text-attn">
-                <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
-                <div>
-                  <p className="text-sm font-bold">{anomalies.length} value{anomalies.length > 1 ? 's are' : ' is'} outside the normal range</p>
-                  <p className="mt-1 text-xs">Most values are within normal range. Please review the flagged parameters and consider consulting a healthcare professional.</p>
-                </div>
-              </div>
-            ) : (
-              <div className="mb-5 flex items-start gap-3 rounded-md bg-ok/10 p-4 text-ok">
-                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0" />
-                <div>
-                  <p className="text-sm font-bold">All values are within normal range</p>
-                  <p className="mt-1 text-xs">No flagged parameters found in this report.</p>
-                </div>
-              </div>
+            {document.insight?.summaryText && (
+              <p className="mb-6 text-sm leading-relaxed text-deep">
+                <FormattedText text={document.insight.summaryText} />
+              </p>
             )}
+            
+            {hasLabData && (
+              <>
+                {anomalies.length > 0 ? (
+                  <div className="mb-5 flex items-start gap-3 rounded-md bg-attn/10 p-4 text-attn">
+                    <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
+                    <div>
+                      <p className="text-sm font-bold">{anomalies.length} value{anomalies.length > 1 ? 's are' : ' is'} outside the normal range</p>
+                      <p className="mt-1 text-xs">Most values are within normal range. Please review the flagged parameters and consider consulting a healthcare professional.</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mb-5 flex items-start gap-3 rounded-md bg-ok/10 p-4 text-ok">
+                    <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0" />
+                    <div>
+                      <p className="text-sm font-bold">All values are within normal range</p>
+                      <p className="mt-1 text-xs">No flagged parameters found in this report.</p>
+                    </div>
+                  </div>
+                )}
 
-            <div className="grid grid-cols-3 gap-2">
-              <div className="rounded-md bg-bg p-3">
-                <p className="text-xs text-mid mb-1">Total</p>
-                <p className="text-lg font-semibold text-deep">{totalCount}</p>
-              </div>
-              <div className="rounded-md bg-bg p-3">
-                <p className="text-xs text-mid mb-1">Normal</p>
-                <p className="text-lg font-semibold text-ok">{normalCount}</p>
-              </div>
-              <div className="rounded-md bg-bg p-3">
-                <p className="text-xs text-mid mb-1">Abnormal</p>
-                <p className="text-lg font-semibold text-alert">{anomalies.length}</p>
-              </div>
-            </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="rounded-md bg-bg p-3">
+                    <p className="text-xs text-mid mb-1">Total</p>
+                    <p className="text-lg font-semibold text-deep">{totalCount}</p>
+                  </div>
+                  <div className="rounded-md bg-bg p-3">
+                    <p className="text-xs text-mid mb-1">Normal</p>
+                    <p className="text-lg font-semibold text-ok">{normalCount}</p>
+                  </div>
+                  <div className="rounded-md bg-bg p-3">
+                    <p className="text-xs text-mid mb-1">Abnormal</p>
+                    <p className="text-lg font-semibold text-alert">{anomalies.length}</p>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
 
-          {anomalies.length > 0 && (
+          {hasLabData && anomalies.length > 0 && (
             <div className="rounded-xl border border-line bg-surf p-5">
               <h3 className="mb-4 text-base font-semibold text-deep">Key Findings</h3>
-              <div className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {anomalies.map((p, i) => (
-                  <div key={i} className="flex items-start gap-3 border-l-2 border-alert pl-3">
+                  <div key={i} className="flex items-start gap-3 rounded-lg border border-line bg-bg p-3 shadow-sm border-l-4 border-l-alert">
                     <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-alert" />
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-semibold text-deep">{p.parameterName}</span>
-                        <span className="rounded bg-alert/10 px-1.5 py-0.5 text-[10px] font-bold text-alert uppercase">{p.status}</span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="truncate text-sm font-semibold text-deep" title={p.parameterName}>{p.parameterName}</span>
+                        <span className="shrink-0 rounded bg-alert/10 px-1.5 py-0.5 text-[10px] font-bold text-alert uppercase">{p.status}</span>
                       </div>
                       <p className="mt-1 text-sm font-bold text-deep">{p.value} <span className="text-xs font-normal text-mid">{p.unit}</span></p>
                       <p className="mt-1 text-xs text-mid">Normal: {p.referenceRangeLow} - {p.referenceRangeHigh}</p>
@@ -504,17 +563,80 @@ function DocumentDetailDashboard({ document, onRefresh, onClear }: { document: D
         </div>
       )}
 
-      {activeTab === 'All Parameters' && (
+      {activeTab === 'All Parameters' && hasLabData && (
         <div className="rounded-xl border border-line bg-surf p-5">
           <h3 className="mb-4 text-base font-semibold text-deep">All Parameters</h3>
           <div className="divide-y divide-line border-t border-line">
-            {document.parameters.map((p, i) => (
+            {document.parameters!.map((p, i) => (
               <div key={i} className="flex justify-between py-3">
                 <span className="text-sm font-medium text-deep">{p.parameterName}</span>
                 <span className="text-sm text-mid">{p.value} {p.unit}</span>
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {activeTab === 'Prescription Details' && hasPrescriptionData && (
+        <div className="rounded-xl border border-line bg-surf p-5">
+          <h3 className="mb-4 text-base font-semibold text-deep">Prescribed Medications</h3>
+          <div className="space-y-4">
+            {document.prescriptions!.map((p, i) => (
+              <div key={i} className="rounded-lg border border-line p-4">
+                <p className="font-semibold text-deep">{p.medicationName}</p>
+                <div className="mt-2 grid grid-cols-2 gap-2 text-sm">
+                  <div><span className="text-mid">Dosage:</span> <span className="text-deep">{p.dosage || 'N/A'}</span></div>
+                  <div><span className="text-mid">Freq:</span> <span className="text-deep">{p.frequency || 'N/A'}</span></div>
+                  <div><span className="text-mid">Duration:</span> <span className="text-deep">{p.duration || 'N/A'}</span></div>
+                  <div><span className="text-mid">Doctor:</span> <span className="text-deep">{p.prescribingDoctor || 'N/A'}</span></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'Vaccinations' && hasVaccinationData && (
+        <div className="rounded-xl border border-line bg-surf p-5">
+          <h3 className="mb-4 text-base font-semibold text-deep">Vaccinations</h3>
+          <div className="space-y-4">
+            {document.vaccinations!.map((v, i) => (
+              <div key={i} className="rounded-lg border border-line p-4">
+                <p className="font-semibold text-deep">{v.vaccineName}</p>
+                <div className="mt-2 grid grid-cols-2 gap-2 text-sm">
+                  <div><span className="text-mid">Dose:</span> <span className="text-deep">{v.doseNumber || 'N/A'}</span></div>
+                  <div><span className="text-mid">Date:</span> <span className="text-deep">{v.dateAdministered ? formatDate(v.dateAdministered) : 'N/A'}</span></div>
+                  <div><span className="text-mid">Administered By:</span> <span className="text-deep">{v.administeredBy || 'N/A'}</span></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'Bill Details' && hasBillData && (
+        <div className="rounded-xl border border-line bg-surf p-5">
+          <h3 className="mb-4 text-base font-semibold text-deep">Medical Bills</h3>
+          <div className="space-y-4">
+            {document.medicalBills!.map((b, i) => (
+              <div key={i} className="rounded-lg border border-line p-4">
+                <p className="font-semibold text-deep">{b.providerName}</p>
+                <div className="mt-2 grid grid-cols-2 gap-2 text-sm">
+                  <div><span className="text-mid">Amount:</span> <span className="text-deep">{b.totalAmount ? `₹${b.totalAmount}` : 'N/A'}</span></div>
+                  <div><span className="text-mid">Date:</span> <span className="text-deep">{b.dateOfService ? formatDate(b.dateOfService) : 'N/A'}</span></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'Metadata' && hasMetadata && (
+        <div className="rounded-xl border border-line bg-surf p-5">
+          <h3 className="mb-4 text-base font-semibold text-deep">Extracted Metadata</h3>
+          <pre className="overflow-x-auto rounded-lg bg-bg p-4 text-sm text-deep">
+            {JSON.stringify(document.extractedMetadata, null, 2)}
+          </pre>
         </div>
       )}
     </div>

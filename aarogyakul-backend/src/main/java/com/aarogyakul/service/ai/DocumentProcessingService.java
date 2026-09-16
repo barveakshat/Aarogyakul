@@ -1,11 +1,8 @@
 package com.aarogyakul.service.ai;
 
-import com.aarogyakul.dto.Dtos.*;
 import com.aarogyakul.entity.*;
 import com.aarogyakul.repository.*;
 import com.aarogyakul.util.Enums.*;
-import com.aarogyakul.util.ParameterUtils;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import org.slf4j.Logger;
@@ -15,6 +12,7 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
 import java.nio.file.*;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -28,36 +26,27 @@ public class DocumentProcessingService {
     private static final int STUCK_THRESHOLD_MINUTES = 10;
 
     private final MedicalDocumentRepository documents;
-    private final MedicalParameterRepository parameters;
     private final AiInsightRepository insights;
     private final TimelineEventRepository events;
     private final OcrService ocrService;
-    private final ParameterExtractionService extractionService;
-    private final ComparisonService comparisonService;
-    private final InsightGenerationService insightGenerationService;
     private final DocumentStatusService statusService;
-    private final LlamaClient llamaClient;
-    private final ObjectMapper objectMapper;
+    private final List<DocumentCategoryProcessor> processors;
+    private final GenericDocumentProcessor genericProcessor;
     private final ApplicationEventPublisher eventPublisher;
     private final MeterRegistry meterRegistry;
 
-    public DocumentProcessingService(MedicalDocumentRepository documents, MedicalParameterRepository parameters,
-                                     AiInsightRepository insights, TimelineEventRepository events, OcrService ocrService,
-                                     ParameterExtractionService extractionService, ComparisonService comparisonService,
-                                     InsightGenerationService insightGenerationService, DocumentStatusService statusService,
-                                     LlamaClient llamaClient, ObjectMapper objectMapper,
+    public DocumentProcessingService(MedicalDocumentRepository documents, AiInsightRepository insights,
+                                     TimelineEventRepository events, OcrService ocrService,
+                                     DocumentStatusService statusService, List<DocumentCategoryProcessor> processors,
+                                     GenericDocumentProcessor genericProcessor,
                                      ApplicationEventPublisher eventPublisher, MeterRegistry meterRegistry) {
         this.documents = documents;
-        this.parameters = parameters;
         this.insights = insights;
         this.events = events;
         this.ocrService = ocrService;
-        this.extractionService = extractionService;
-        this.comparisonService = comparisonService;
-        this.insightGenerationService = insightGenerationService;
         this.statusService = statusService;
-        this.llamaClient = llamaClient;
-        this.objectMapper = objectMapper;
+        this.processors = processors;
+        this.genericProcessor = genericProcessor;
         this.eventPublisher = eventPublisher;
         this.meterRegistry = meterRegistry;
     }
@@ -72,74 +61,42 @@ public class DocumentProcessingService {
 
             MedicalDocument document = documents.findById(documentId).orElseThrow();
 
-            log.info("Stage 1/5: Extracting text from PDF for document {}", documentId);
-            currentStageKey = ProcessingStageEvent.EXTRACTING_TEXT;
+            log.info("Stage 1/3: Extracting text from PDF for document {}", documentId);
             publishStage(documentId, currentStageKey, "Reading your PDF...");
             String text = ocrService.extractText(tempPdf);
 
-            log.info("Stage 2/5: Extracting parameters via LLM for document {}", documentId);
+            log.info("Stage 2/3: Extracting data via LLM for document {}", documentId);
             currentStageKey = ProcessingStageEvent.IDENTIFYING_PARAMETERS;
-            publishStage(documentId, currentStageKey, "Identifying lab parameters...");
-            ExtractedReport report = extractionService.extract(text);
-            LocalDate reportDate = report.reportDate() == null ? LocalDate.now() : report.reportDate();
-            document.reportDate = reportDate;
+            publishStage(documentId, currentStageKey, "Analyzing document contents...");
+            
+            DocumentCategoryProcessor processor = processors.stream()
+                    .filter(p -> p.supports(document.documentType) && p != genericProcessor)
+                    .findFirst()
+                    .orElse(genericProcessor);
 
-            List<MedicalParameter> saved = new ArrayList<>();
-            for (ExtractedParameter extracted : report.parameters()) {
-                if (!ParameterUtils.isSafeForStorage(extracted.value())) {
-                    log.warn("Skipping parameter '{}' for doc {}: value {} exceeds NUMERIC(10,3) range — likely LLM scientific-notation error",
-                            extracted.name(), documentId, extracted.value());
-                    continue;
-                }
-                MedicalParameter parameter = new MedicalParameter();
-                parameter.document = document;
-                parameter.familyMember = document.familyMember;
-                parameter.parameterName = extracted.name();
-                parameter.value = extracted.value();
-                parameter.unit = extracted.unit();
-                // Null out reference range fields that overflow rather than crashing the whole document
-                parameter.referenceRangeLow  = ParameterUtils.isSafeForStorage(extracted.referenceRangeLow())
-                        ? extracted.referenceRangeLow() : null;
-                parameter.referenceRangeHigh = ParameterUtils.isSafeForStorage(extracted.referenceRangeHigh())
-                        ? extracted.referenceRangeHigh() : null;
-                if (parameter.referenceRangeLow == null && extracted.referenceRangeLow() != null) {
-                    log.warn("Nulled referenceRangeLow for '{}' (doc {}): value {} exceeds NUMERIC(10,3) range",
-                            extracted.name(), documentId, extracted.referenceRangeLow());
-                }
-                if (parameter.referenceRangeHigh == null && extracted.referenceRangeHigh() != null) {
-                    log.warn("Nulled referenceRangeHigh for '{}' (doc {}): value {} exceeds NUMERIC(10,3) range",
-                            extracted.name(), documentId, extracted.referenceRangeHigh());
-                }
-                parameter.reportDate = reportDate;
-                parameter.confidence = ParameterUtils.assessConfidence(extracted.name(), extracted.value()).name();
-                saved.add(parameters.save(parameter));
-            }
-            log.info("Stage 3/5: Extracted {} parameters for document {}", saved.size(), documentId);
+            AiInsight insight = processor.process(document, text);
 
-            log.info("Stage 4/5: Comparing with historical values for document {}", documentId);
-            currentStageKey = ProcessingStageEvent.COMPARING_HISTORY;
-            publishStage(documentId, currentStageKey, "Comparing with previous results...");
-            List<ComparisonData> comparisons = comparisonService.compare(saved);
-
-            log.info("Stage 5/5: Generating AI summary for document {}", documentId);
+            log.info("Stage 3/3: Saving generated insights and metadata for document {}", documentId);
             currentStageKey = ProcessingStageEvent.GENERATING_SUMMARY;
-            publishStage(documentId, currentStageKey, "Writing your health summary...");
-            AiInsight insight = new AiInsight();
-            insight.document = document;
-            insight.familyMember = document.familyMember;
-            insight.summaryText = insightGenerationService.generate(comparisons);
-            insight.comparisonJson = objectMapper.writeValueAsString(Map.of("parameters", comparisons));
-            insight.modelUsed = llamaClient.modelName();
+            publishStage(documentId, currentStageKey, "Finalizing your results...");
             insights.save(insight);
 
             documents.save(document);
             statusService.markCompleted(documentId);
-            createTimelineEvent(document, saved);
+            createTimelineEvent(document, insight);
+            
             currentStageKey = ProcessingStageEvent.COMPLETED;
             publishStage(documentId, currentStageKey, "Your results are ready!");
-            log.info("AI pipeline COMPLETED for document {} — {} parameters extracted", documentId, saved.size());
+            log.info("AI pipeline COMPLETED for document {}", documentId);
             timerSample.stop(Timer.builder("aarogyakul.ai.pipeline.duration")
                     .tag("status", "success").register(meterRegistry));
+        } catch (ExtractionValidationException e) {
+            log.error("AI pipeline FAILED for document {}: Validation error {}", documentId, e.getMessage());
+            statusService.markFailed(documentId, "Validation Error: " + e.getMessage());
+            publishStage(documentId, ProcessingStageEvent.FAILED, "We couldn't safely read some data from this document.");
+            meterRegistry.counter("aarogyakul.ai.pipeline.failures").increment();
+            timerSample.stop(Timer.builder("aarogyakul.ai.pipeline.duration")
+                    .tag("status", "failure").register(meterRegistry));
         } catch (Exception e) {
             log.error("AI pipeline FAILED for document {}: {}", documentId, e.getMessage(), e);
             statusService.markFailed(documentId, currentStageKey + "|" + e.getMessage());
@@ -155,11 +112,6 @@ public class DocumentProcessingService {
         }
     }
 
-    /**
-     * Recovers documents stuck in PROCESSING state for more than the threshold.
-     * Runs every 5 minutes. Marks stuck documents as FAILED so they can be retried
-     * or reported to the user.
-     */
     @Scheduled(fixedDelay = 300_000)
     @Transactional
     public void recoverStuckDocuments() {
@@ -181,14 +133,37 @@ public class DocumentProcessingService {
         }
     }
 
-    private void createTimelineEvent(MedicalDocument document, List<MedicalParameter> saved) {
+    private void createTimelineEvent(MedicalDocument document, AiInsight insight) {
         TimelineEvent event = new TimelineEvent();
         event.familyMember = document.familyMember;
         event.eventType = TimelineEventType.DOCUMENT_UPLOAD;
         event.eventDate = document.reportDate == null ? LocalDate.now() : document.reportDate;
-        event.title = document.documentType == DocumentType.BLOOD_REPORT ? "Blood Test Uploaded" : "Document Uploaded";
-        String names = saved.stream().map(p -> p.parameterName).distinct().limit(6).reduce((a, b) -> a + ", " + b).orElse("No parameters");
-        event.description = "Extracted parameters: " + names;
+        
+        switch (document.documentType) {
+            case BLOOD_REPORT, LAB_REPORT -> {
+                event.title = "Lab Test Uploaded";
+                event.description = "Extracted lab parameters.";
+            }
+            case PRESCRIPTION -> {
+                event.title = "Prescription Uploaded";
+                event.description = "Medication details extracted.";
+            }
+            case VACCINATION -> {
+                event.title = "Vaccination Uploaded";
+                event.description = "Vaccine details extracted.";
+            }
+            case BILL -> {
+                event.title = "Medical Bill Uploaded";
+                event.description = "Invoice details extracted.";
+            }
+            default -> {
+                event.title = "Document Uploaded";
+                event.description = insight.summaryText != null && insight.summaryText.length() > 50 
+                        ? insight.summaryText.substring(0, 47) + "..." 
+                        : "Processed document.";
+            }
+        }
+        
         event.relatedDocument = document;
         events.save(event);
     }

@@ -26,7 +26,11 @@ export default function DashboardPage() {
         setTimeline(events.data)
         setTrend(tracked.parameterNames[0] ? await getParameterTrend(activeProfile.memberId, tracked.parameterNames[0]) : null)
         const latestReport = docs.data.find(doc => doc.processingStatus === 'COMPLETED' && (doc.documentType === 'BLOOD_REPORT' || doc.documentType === 'LAB_REPORT'))
-        setParameters(latestReport ? (await getDocument(latestReport.documentId)).parameters : [])
+        try {
+          setParameters(latestReport ? ((await getDocument(latestReport.documentId)).parameters || []) : [])
+        } catch (err) {
+          setParameters([])
+        }
       })
       .finally(() => setLoading(false))
   }, [activeProfile])

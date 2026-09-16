@@ -18,14 +18,15 @@ export function formatDateTime(value?: string) {
 
 export function documentTypeLabel(type?: DocumentType) {
   const labels: Record<DocumentType, string> = {
-    BLOOD_REPORT: 'Blood report',
-    LAB_REPORT: 'Lab report',
+    BLOOD_REPORT: 'Blood Report',
+    LAB_REPORT: 'Lab Report',
     PRESCRIPTION: 'Prescription',
-    DISCHARGE_SUMMARY: 'Discharge summary',
-    BILL: 'Bill / Invoice',
-    INSURANCE_DOC: 'Insurance document',
+    DISCHARGE_SUMMARY: 'Discharge Summary',
+    BILL: 'Medical Bill',
+    INSURANCE_DOC: 'Insurance Document',
     MEDICAL_ID: 'Medical ID',
-    OTHER: 'Other document',
+    VACCINATION: 'Vaccination Certificate',
+    OTHER: 'Other Document',
   }
   return type ? labels[type] : 'Document'
 }

@@ -57,9 +57,27 @@ public class Mapper {
                 resolveUrl(d.fileUrl), resolveUrl(d.thumbnailUrl), d.fileSizeBytes);
     }
 
-    public DocumentResponse documentResponse(MedicalDocument d, List<ParameterResponse> parameters, InsightResponse insight) {
+    public PrescriptionResponse prescription(Prescription p) {
+        return new PrescriptionResponse(p.id, p.medicationName, p.dosage, p.frequency, p.duration, p.prescribingDoctor);
+    }
+    
+    public VaccinationResponse vaccination(Vaccination v) {
+        return new VaccinationResponse(v.id, v.vaccineName, v.doseNumber, v.dateAdministered, v.administeredBy);
+    }
+    
+    public MedicalBillResponse medicalBill(MedicalBill b) {
+        return new MedicalBillResponse(b.id, b.providerName, b.totalAmount, b.dateOfService);
+    }
+
+    public DocumentResponse documentResponse(MedicalDocument d, List<ParameterResponse> parameters, 
+                                             List<PrescriptionResponse> prescriptions,
+                                             List<VaccinationResponse> vaccinations,
+                                             List<MedicalBillResponse> medicalBills,
+                                             Map<String, Object> extractedMetadata,
+                                             InsightResponse insight) {
         return new DocumentResponse(d.id, d.fileName, d.documentType, d.processingStatus, d.reportDate, d.processingError,
-                parameters, insight, d.uploadedAt, resolveUrl(d.fileUrl), resolveUrl(d.thumbnailUrl), d.fileSizeBytes);
+                parameters, prescriptions, vaccinations, medicalBills, extractedMetadata, insight, 
+                d.uploadedAt, resolveUrl(d.fileUrl), resolveUrl(d.thumbnailUrl), d.fileSizeBytes);
     }
 
     public InsightResponse insight(AiInsight insight) {

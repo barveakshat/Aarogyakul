@@ -1,6 +1,6 @@
 export type UUID = string
 
-export type DocumentType = 'BLOOD_REPORT' | 'LAB_REPORT' | 'PRESCRIPTION' | 'DISCHARGE_SUMMARY' | 'BILL' | 'INSURANCE_DOC' | 'MEDICAL_ID' | 'OTHER'
+export type DocumentType = 'BLOOD_REPORT' | 'LAB_REPORT' | 'PRESCRIPTION' | 'DISCHARGE_SUMMARY' | 'BILL' | 'INSURANCE_DOC' | 'MEDICAL_ID' | 'OTHER' | 'VACCINATION'
 export type ProcessingStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED'
 export type TimelineEventType = 'DOCUMENT_UPLOAD' | 'DIAGNOSIS' | 'VACCINATION' | 'DOCTOR_VISIT' | 'SURGERY' | 'LAB_TEST' | 'MEDICATION_CHANGE' | 'NOTE'
 
@@ -112,6 +112,30 @@ export interface ParameterResponse {
   confidence?: string
 }
 
+export interface PrescriptionResponse {
+  id: string
+  medicationName: string
+  dosage?: string
+  frequency?: string
+  duration?: string
+  prescribingDoctor?: string
+}
+
+export interface VaccinationResponse {
+  id: string
+  vaccineName: string
+  doseNumber?: string
+  dateAdministered?: string
+  administeredBy?: string
+}
+
+export interface MedicalBillResponse {
+  id: string
+  providerName: string
+  totalAmount?: number
+  dateOfService?: string
+}
+
 export interface InsightResponse {
   summaryText?: string
   comparisonJson?: Record<string, unknown>
@@ -119,7 +143,11 @@ export interface InsightResponse {
 
 export interface DocumentResponse extends DocumentSummaryResponse {
   processingError?: string
-  parameters: ParameterResponse[]
+  parameters?: ParameterResponse[]
+  prescriptions?: PrescriptionResponse[]
+  vaccinations?: VaccinationResponse[]
+  medicalBills?: MedicalBillResponse[]
+  extractedMetadata?: Record<string, unknown>
   insight?: InsightResponse
 }
 

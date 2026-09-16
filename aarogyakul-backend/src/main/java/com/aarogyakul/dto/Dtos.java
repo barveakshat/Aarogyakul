@@ -74,12 +74,28 @@ public final class Dtos {
                                           Long fileSizeBytes) {}
     public record DocumentResponse(UUID documentId, String fileName, DocumentType documentType,
                                    ProcessingStatus processingStatus, LocalDate reportDate,
-                                   String processingError, List<ParameterResponse> parameters,
+                                   String processingError, 
+                                   List<ParameterResponse> parameters,
+                                   List<PrescriptionResponse> prescriptions,
+                                   List<VaccinationResponse> vaccinations,
+                                   List<MedicalBillResponse> medicalBills,
+                                   Map<String, Object> extractedMetadata,
                                    InsightResponse insight, OffsetDateTime uploadedAt,
                                    String fileUrl, String thumbnailUrl, Long fileSizeBytes) {}
+                                   
     public record ParameterResponse(String parameterName, BigDecimal value, String unit,
                                     BigDecimal referenceRangeLow, BigDecimal referenceRangeHigh,
                                     String confidence) {}
+                                    
+    public record PrescriptionResponse(UUID id, String medicationName, String dosage, 
+                                       String frequency, String duration, String prescribingDoctor) {}
+                                       
+    public record VaccinationResponse(UUID id, String vaccineName, String doseNumber, 
+                                      LocalDate dateAdministered, String administeredBy) {}
+                                      
+    public record MedicalBillResponse(UUID id, String providerName, BigDecimal totalAmount, 
+                                      LocalDate dateOfService) {}
+
     public record InsightResponse(String summaryText, Map<String, Object> comparisonJson) {}
     public record TimelineEventResponse(UUID id, TimelineEventType eventType, LocalDate eventDate,
                                         String title, String description, UUID relatedDocumentId,

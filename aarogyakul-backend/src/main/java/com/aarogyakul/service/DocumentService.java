@@ -20,27 +20,40 @@ public class DocumentService {
     private final MemberService memberService;
     private final MedicalDocumentRepository documents;
     private final MedicalParameterRepository parameters;
+    private final PrescriptionRepository prescriptions;
+    private final VaccinationRepository vaccinations;
+    private final MedicalBillRepository medicalBills;
     private final AiInsightRepository insights;
     private final TimelineEventRepository timelineEvents;
     private final StorageService storage;
     private final DocumentProcessingService processingService;
     private final Mapper mapper;
     private final PdfThumbnailGenerator thumbnailGenerator;
+    private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
 
     public DocumentService(MemberService memberService, MedicalDocumentRepository documents,
-                           MedicalParameterRepository parameters, AiInsightRepository insights,
+                           MedicalParameterRepository parameters, 
+                           PrescriptionRepository prescriptions,
+                           VaccinationRepository vaccinations,
+                           MedicalBillRepository medicalBills,
+                           AiInsightRepository insights,
                            TimelineEventRepository timelineEvents, StorageService storage,
                            DocumentProcessingService processingService, Mapper mapper,
-                           PdfThumbnailGenerator thumbnailGenerator) {
+                           PdfThumbnailGenerator thumbnailGenerator,
+                           com.fasterxml.jackson.databind.ObjectMapper objectMapper) {
         this.memberService = memberService;
         this.documents = documents;
         this.parameters = parameters;
+        this.prescriptions = prescriptions;
+        this.vaccinations = vaccinations;
+        this.medicalBills = medicalBills;
         this.insights = insights;
         this.timelineEvents = timelineEvents;
         this.storage = storage;
         this.processingService = processingService;
         this.mapper = mapper;
         this.thumbnailGenerator = thumbnailGenerator;
+        this.objectMapper = objectMapper;
     }
 
     @Transactional
@@ -98,9 +111,23 @@ public class DocumentService {
     @Transactional(readOnly = true)
     public DocumentResponse get(UUID documentId, UUID userId) {
         MedicalDocument document = requireOwnedDocument(documentId, userId);
+        
         var params = parameters.findByDocumentIdOrderByParameterNameAsc(document.id).stream().map(mapper::parameter).toList();
+        var rx = prescriptions.findByDocumentId(document.id).stream().map(mapper::prescription).toList();
+        var vax = vaccinations.findByDocumentId(document.id).stream().map(mapper::vaccination).toList();
+        var bills = medicalBills.findByDocumentId(document.id).stream().map(mapper::medicalBill).toList();
+        
+        Map<String, Object> metadata = null;
+        if (document.extractedMetadata != null && !document.extractedMetadata.isBlank()) {
+            try {
+                metadata = objectMapper.readValue(document.extractedMetadata, new com.fasterxml.jackson.core.type.TypeReference<>() {});
+            } catch (Exception e) {
+                // Ignore parse errors on read
+            }
+        }
+        
         var insight = insights.findByDocumentId(document.id).map(mapper::insight).orElse(null);
-        return mapper.documentResponse(document, params, insight);
+        return mapper.documentResponse(document, params, rx, vax, bills, metadata, insight);
     }
 
     @Transactional(readOnly = true)
@@ -124,6 +151,10 @@ public class DocumentService {
         timelineEvents.deleteByRelatedDocumentId(document.id);
         insights.deleteByDocumentId(document.id);
         parameters.deleteByDocumentId(document.id);
+        prescriptions.deleteAll(prescriptions.findByDocumentId(document.id));
+        vaccinations.deleteAll(vaccinations.findByDocumentId(document.id));
+        medicalBills.deleteAll(medicalBills.findByDocumentId(document.id));
+        
         document.deletedAt = java.time.Instant.now();
         documents.save(document);
     }
@@ -139,6 +170,10 @@ public class DocumentService {
         timelineEvents.deleteByRelatedDocumentId(document.id);
         insights.deleteByDocumentId(document.id);
         parameters.deleteByDocumentId(document.id);
+        prescriptions.deleteAll(prescriptions.findByDocumentId(document.id));
+        vaccinations.deleteAll(vaccinations.findByDocumentId(document.id));
+        medicalBills.deleteAll(medicalBills.findByDocumentId(document.id));
+        document.extractedMetadata = null;
 
         document.retryCount = 0;
         document.processingStatus = ProcessingStatus.PENDING;

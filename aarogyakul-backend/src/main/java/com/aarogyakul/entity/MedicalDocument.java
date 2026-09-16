@@ -46,6 +46,9 @@ public class MedicalDocument {
     public int retryCount = 0;
     @Column(name = "deleted_at")
     public Instant deletedAt;
+    @Column(name = "extracted_metadata", columnDefinition = "jsonb")
+    @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.JSON)
+    public String extractedMetadata;
 
     @PrePersist
     void prePersist() {
