@@ -88,3 +88,11 @@ sample-reports/
 
 TO_BE_DONE_LATER.txt
 engineering-notes.md
+
+# =========================
+# Local Testing / Misc
+# =========================
+node_modules/
+test-pipeline.js
+test.sh
+login.json
