@@ -7,7 +7,7 @@ import { useToast } from '../components/Toast'
 import { Shield, FileText, Lock, User } from 'lucide-react'
 
 export default function SettingsPage() {
-  const { user, logout, isDemo } = useAuth()
+  const { user, isDemo } = useAuth()
   const { toast } = useToast()
 
   const [currentPw, setCurrentPw] = useState('')
@@ -68,9 +68,6 @@ export default function SettingsPage() {
               <div className="text-xs font-medium text-mid">Name</div>
               <div className="mt-1 text-sm font-medium text-deep">{user?.fullName || '—'}</div>
             </div>
-          </div>
-          <div className="mt-6 pt-4 border-t border-line">
-            <Button variant="danger" onClick={logout}>Sign Out</Button>
           </div>
         </Card>
 

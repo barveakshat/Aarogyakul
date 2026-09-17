@@ -94,6 +94,16 @@ export function AppLayout() {
             ))}
           </div>
         </nav>
+        
+        <div className="px-6 py-4 border-t border-white/5 mt-auto">
+          <button 
+            onClick={handleLogout} 
+            className="flex w-full items-center gap-3 px-3 py-2 rounded-md text-sm font-medium text-sbTxt hover:text-alert hover:bg-alert/10 transition-colors"
+          >
+            <LogOut className="w-[18px] h-[18px]" />
+            <span>Sign out</span>
+          </button>
+        </div>
       </aside>
 
       {/* ─── MAIN CONTENT AREA ─── */}
@@ -164,10 +174,6 @@ export function AppLayout() {
                     <Link to="/app/settings" onClick={() => setProfileDropdownOpen(false)} className="flex items-center gap-2 px-4 py-2 text-sm text-deep hover:bg-bg">
                       <Settings size={16} /> Settings
                     </Link>
-                    <hr className="my-1 border-line" />
-                    <button onClick={handleLogout} className="flex w-full items-center gap-2 px-4 py-2 text-sm text-alert hover:bg-alert/5 text-left">
-                      <LogOut size={16} /> Sign out
-                    </button>
                   </div>
                 )}
               </div>
