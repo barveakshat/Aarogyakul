@@ -4,14 +4,19 @@
 
 <h1 align="center">AarogyaKul</h1>
 <p align="center"><strong>AI-powered family health management — organized by intelligence, not effort.</strong></p>
+<p align="center">
+  <strong><a href="https://aarogyakul.vercel.app/" target="_blank">🟢 Live Demo (aarogyakul.vercel.app)</a></strong>
+</p>
 
 <p align="center">
   <img src="https://img.shields.io/badge/Java-21-6366F1?style=flat-square&logo=openjdk&logoColor=white" />
-  <img src="https://img.shields.io/badge/Spring_Boot-3.5-6366F1?style=flat-square&logo=springboot&logoColor=white" />
+  <img src="https://img.shields.io/badge/Spring_Boot-3.x-6366F1?style=flat-square&logo=springboot&logoColor=white" />
   <img src="https://img.shields.io/badge/React-19-6366F1?style=flat-square&logo=react&logoColor=white" />
+  <img src="https://img.shields.io/badge/Tailwind_CSS-4.0-6366F1?style=flat-square&logo=tailwindcss&logoColor=white" />
   <img src="https://img.shields.io/badge/PostgreSQL-17-6366F1?style=flat-square&logo=postgresql&logoColor=white" />
-  <img src="https://img.shields.io/badge/Llama_AI-HuggingFace-6366F1?style=flat-square&logo=meta&logoColor=white" />
-  <img src="https://img.shields.io/badge/AWS-S3-6366F1?style=flat-square&logo=amazonaws&logoColor=white" />
+  <img src="https://img.shields.io/badge/AWS_S3-Storage-6366F1?style=flat-square&logo=amazonaws&logoColor=white" />
+  <img src="https://img.shields.io/badge/Llama_3.1-HuggingFace-6366F1?style=flat-square&logo=meta&logoColor=white" />
+  <img src="https://img.shields.io/badge/Vercel-Deployed-000000?style=flat-square&logo=vercel&logoColor=white" />
 </p>
 
 ---
@@ -70,35 +75,61 @@ Allergies with severity levels. Chronic conditions with diagnosis dates. Everyth
 
 ## Architecture
 
+### System Architecture
+
 ```mermaid
 flowchart TB
-    UI["React + TypeScript"] -->|"REST + JWT"| API["Spring Boot API"]
-    API --> AUTH["Spring Security + BCrypt"]
-    API --> DB["PostgreSQL"]
-    API --> STORE{"StorageService"}
-    STORE --> LOCAL["Local FS"]
-    STORE --> S3["AWS S3"]
-    API --> EXEC["Async AI Executor"]
-    EXEC --> OCR["PDFBox + Tesseract"]
-    EXEC --> HF["HuggingFace Llama API"]
+    subgraph Frontend ["Frontend (Vercel)"]
+        UI["React 19 + TypeScript\nTailwind CSS 4"]
+    end
+
+    subgraph Backend ["Backend (Spring Boot)"]
+        API["REST API Controllers"]
+        AUTH["Spring Security (JWT)"]
+        EXEC["@Async Task Executor"]
+        
+        API --> AUTH
+        API --> EXEC
+    end
+
+    subgraph Cloud & External ["Infrastructure"]
+        DB[(PostgreSQL 17\nEntities & History)]
+        S3[("AWS S3\nDocument Vault")]
+        HF{"HuggingFace\nLlama 3.1 API"}
+    end
+
+    UI -->|"REST (HTTPS)"| API
+    API -->|"JPA / JDBC"| DB
+    API -->|"Upload / Pre-signed URLs"| S3
+    EXEC -->|"REST (JSON)"| HF
 ```
 
-### AI Pipeline Flow
+### AI Report Pipeline
 
 ```mermaid
-flowchart LR
-    A["PDF Upload"] --> B["Validate (PDF, ≤15MB)"]
-    B --> C["Store in S3/Local"]
-    C --> D["Return 202 Accepted"]
-    D --> E["PDFBox Extract"]
-    E -->|"Low text"| F["Tesseract OCR"]
-    E --> G["Llama JSON Parse"]
-    F --> G
-    G --> H["Canonicalize Names"]
-    H --> I["Save Parameters"]
-    I --> J["Compare with History"]
-    J --> K["Llama Summary"]
-    K --> L["COMPLETED + Timeline Event"]
+flowchart TD
+    Start(("📄 PDF Upload")) --> OCR{"1. OCR Extraction"}
+    
+    OCR -->|"Primary"| PDFBox["Apache PDFBox\n(Text-based PDFs)"]
+    OCR -->|"Fallback"| Tesseract["Tesseract / tess4j\n(Scanned Images)"]
+    
+    PDFBox --> LLM
+    Tesseract --> LLM
+    
+    LLM["2. Structured Parsing (LLM)"] -->|"Llama API\n(Strict JSON Schema)"| Sanitize["Sanitization\n(Strip Markdown)"]
+    
+    Sanitize --> Canon["3. Canonicalization"]
+    Canon -->|"Synonym Mapping\n(e.g. FBS -> Fasting Blood Sugar)"| Confidence["4. Confidence Scoring"]
+    
+    Confidence -->|"Sanity Bounds\n(e.g. Hb < 30)"| Save[("Save to DB\n(Medical Parameters)")]
+    
+    Save --> Trend["5. Trend Comparison"]
+    Trend -->|"Query Previous\nCompute Δ%"| Summary["6. Insight Generation"]
+    
+    Summary -->|"Llama API\n(Plain English + Disclaimer)"| Finalize(("✅ Complete Event"))
+    
+    classDef ai fill:#6366f1,stroke:#4338ca,stroke-width:2px,color:#fff
+    class LLM,Summary ai
 ```
 
 ---
@@ -240,15 +271,5 @@ All protected routes require `Authorization: Bearer <token>`.
 
 ---
 
-## Scope
 
-This is a hackathon MVP. Deliberately out of scope:
-- Medication tracking
-- Multi-family support
-- Insurance claim processing
 
----
-
-<p align="center">
-  Built with ❤️ for <strong>BharatAcademix CodeQuest Hackathon</strong>
-</p>
